@@ -20,3 +20,10 @@ coverage/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Lokale kilde- og arbejdsfiler – kun selve applikationen offentliggøres
+Reference.docx
+Kontoplan.xlsx
+CLAUDE.md
+PLAN.md
+lokalt/
