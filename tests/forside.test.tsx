@@ -35,9 +35,7 @@ describe("forsiden", () => {
     expect(nyOpgave).toBeEnabled();
 
     await bruger.click(nyOpgave);
-    const besked = screen.getByRole("status");
-    expect(besked).toHaveTextContent(/variantnummer 3\d{6} \(fuldt momsregistreret ejendom\)/);
-    expect(besked).toHaveTextContent("Bogføringsbilledet kommer i næste fase.");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/Variant 3\d{6} · Momspligtig/);
   });
 
   it("henter en variant og flytter momsvalget efter variantnummeret", async () => {
@@ -48,9 +46,7 @@ describe("forsiden", () => {
     expect(screen.getByRole("radio", { name: "Delvis moms" })).toHaveAttribute("aria-checked", "true");
 
     await bruger.click(screen.getByRole("button", { name: "Hent variant" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "variantnummer 2483915 (delvis momsregistreret ejendom)",
-    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Variant 2483915 · Delvis moms");
   });
 
   it("viser en fejl ved et ugyldigt variantnummer og starter ingen opgave", async () => {
@@ -61,13 +57,13 @@ describe("forsiden", () => {
 
     await bruger.click(screen.getByRole("button", { name: "Hent variant" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Variantnummeret skal have 7 cifre.");
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Resultatopgørelse")).not.toBeInTheDocument();
   });
 
   it("kan hente en variant med Enter-tasten", async () => {
     const bruger = userEvent.setup();
     render(<App />);
     await bruger.type(screen.getByLabelText("Variantnummer"), "1000042{Enter}");
-    expect(screen.getByRole("status")).toHaveTextContent("variantnummer 1000042 (momsfri ejendom)");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Variant 1000042 · Momsfri");
   });
 });

@@ -1,10 +1,19 @@
 import { useState } from "react";
+import { Bogfoeringsbillede } from "./components/Bogfoeringsbillede";
 import { Forside } from "./components/Forside";
-import { MOMSSTATUS_BESKRIVELSE } from "./domain/momsstatus";
+import type { Opgave } from "./domain/opgave";
+import { danProeveopgave } from "./domain/proeveopgave";
 import type { Variant } from "./domain/variant";
 
 export default function App() {
-  const [valgtVariant, setValgtVariant] = useState<Variant | null>(null);
+  const [opgave, setOpgave] = useState<Opgave | null>(null);
+
+  // Indtil opgavegeneratoren findes (fase 3), åbnes den faste prøveopgave for momsstatus.
+  const start = (variant: Variant) => setOpgave(danProeveopgave(variant));
+
+  if (opgave) {
+    return <Bogfoeringsbillede key={opgave.variant.nummer} opgave={opgave} onTilForside={() => setOpgave(null)} />;
+  }
 
   return (
     <div className="app">
@@ -12,19 +21,7 @@ export default function App() {
         <h1>Bogføring af ejendomsregnskaber</h1>
         <span className="topbar-info">Ejendomsselskabet Ejendommen A/S</span>
       </header>
-      <Forside onStart={setValgtVariant} />
-      {valgtVariant && (
-        <div className="besked" role="status">
-          <span>
-            Opgave med variantnummer <strong>{valgtVariant.nummer}</strong> (
-            {MOMSSTATUS_BESKRIVELSE[valgtVariant.momsstatus]}) er valgt. Bogføringsbilledet kommer i
-            næste fase.
-          </span>
-          <button type="button" className="knap knap-sekundaer knap-lille" onClick={() => setValgtVariant(null)}>
-            Luk
-          </button>
-        </div>
-      )}
+      <Forside onStart={start} />
     </div>
   );
 }
