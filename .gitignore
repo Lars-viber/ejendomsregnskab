@@ -27,3 +27,6 @@ Kontoplan.xlsx
 CLAUDE.md
 PLAN.md
 lokalt/
+
+# Lokale indstillinger for Claude Code
+.claude/

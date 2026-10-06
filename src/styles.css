@@ -1,0 +1,273 @@
+/* Farvetema fra Reference.docx afsnit 4 (samme som reference-applikationen). */
+:root {
+  --primaer: #0050a4;
+  --primaer-moerk: #003f82;
+  --sekundaer: #1769c2;
+  --lysblaa: #dcebfa;
+  --baggrund: #f4f8fd;
+  --flade: #ffffff;
+  --tekst: #172b3a;
+  --daempet: #526b7f;
+  --kant: #c9d9ea;
+  --kant-staerk: #91b4d8;
+  --groen: #278369;
+  --lysgroen: #e4f3ed;
+  --roed: #a53a32;
+  --lysroed: #f9e8e6;
+
+  color: var(--tekst);
+  background: var(--baggrund);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--baggrund);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(23, 105, 194, 0.38);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+/* Topbar */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px clamp(16px, 3vw, 40px);
+  color: white;
+  background: linear-gradient(112deg, #00478f 0%, var(--primaer) 52%, var(--sekundaer) 100%);
+}
+
+.topbar h1 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.topbar-info {
+  padding: 4px 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 999px;
+}
+
+/* Knapper */
+.knap {
+  min-height: 38px;
+  padding: 7px 16px;
+  font-weight: 700;
+  line-height: 1.1;
+  border-radius: 8px;
+  transition: background-color 130ms ease, border-color 130ms ease;
+}
+
+.knap-primaer {
+  color: white;
+  background: var(--primaer);
+  border: 1px solid var(--primaer);
+}
+
+.knap-primaer:hover:not(:disabled) {
+  background: var(--primaer-moerk);
+  border-color: var(--primaer-moerk);
+}
+
+.knap-sekundaer {
+  color: var(--primaer-moerk);
+  background: var(--flade);
+  border: 1px solid var(--kant-staerk);
+}
+
+.knap-sekundaer:hover:not(:disabled) {
+  background: var(--lysblaa);
+  border-color: var(--sekundaer);
+}
+
+.knap-lille {
+  min-height: 30px;
+  padding: 4px 12px;
+}
+
+/* Forside */
+.forside {
+  display: grid;
+  gap: 14px;
+  width: min(1040px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 0;
+}
+
+.forside section {
+  padding: 14px 18px;
+  background: var(--flade);
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+}
+
+.forside h2 {
+  margin-bottom: 4px;
+  color: var(--primaer-moerk);
+  font-size: 1rem;
+}
+
+.forside p {
+  margin: 0;
+}
+
+.knapnavn {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.momsknapper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.momsknap {
+  min-height: 42px;
+  padding: 8px 12px;
+  color: var(--primaer-moerk);
+  font-weight: 700;
+  background: var(--flade);
+  border: 2px solid var(--kant);
+  border-radius: 10px;
+}
+
+.momsknap:hover {
+  border-color: var(--sekundaer);
+}
+
+.momsknap[aria-checked="true"] {
+  color: white;
+  background: var(--primaer);
+  border-color: var(--primaer);
+}
+
+.forside .start {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  background: var(--lysblaa);
+  border-color: #bdd2e9;
+}
+
+.start-ny {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding-top: 22px;
+}
+
+.hjaelpetekst {
+  color: var(--daempet);
+  font-size: 0.9rem;
+}
+
+.start-variant {
+  display: grid;
+  gap: 4px;
+}
+
+.start-variant label {
+  color: var(--primaer-moerk);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.variant-felt {
+  display: flex;
+  gap: 8px;
+}
+
+.variant-felt input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 10px;
+  color: var(--tekst);
+  background: var(--flade);
+  border: 1px solid var(--kant-staerk);
+  border-radius: 8px;
+}
+
+.variant-felt input[aria-invalid="true"] {
+  border-color: var(--roed);
+  background: var(--lysroed);
+}
+
+.feltfejl {
+  color: var(--roed);
+  font-weight: 700;
+}
+
+/* Midlertidig besked, indtil bogføringsbilledet findes (fase 2) */
+.besked {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1040px, calc(100% - 32px));
+  padding: 10px 16px;
+  box-shadow: 0 8px 24px rgba(40, 84, 126, 0.18);
+  background: var(--lysgroen);
+  border: 1px solid var(--groen);
+  border-left: 5px solid var(--groen);
+  border-radius: 10px;
+}
+
+@media (max-width: 760px) {
+  .forside .start {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .start-ny {
+    padding-top: 0;
+  }
+
+  .momsknapper {
+    grid-template-columns: 1fr;
+  }
+}

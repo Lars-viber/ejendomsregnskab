@@ -1,0 +1,616 @@
+{
+  "kilde": "Kontoplan.xlsx",
+  "konti": [
+    {
+      "nummer": 1000,
+      "kategori": "Indtægt",
+      "navn": "Lejeindtægter, momspligtige",
+      "indhold": [
+        {
+          "tekst": "Lejeindtægter (momspligtig)",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 1001,
+      "kategori": "Indtægt",
+      "navn": "Lejeindtægter, momsfrie",
+      "indhold": [
+        {
+          "tekst": "Lejeindtægter (ikke momspligtig)",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 2000,
+      "kategori": "Omkostning",
+      "navn": "Skatter og forsikring",
+      "indhold": [
+        {
+          "tekst": "Grundskyld / ejendomsskatter",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Dækningsafgift",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Renovationsafgifter",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Rottebekæmpelsesafgift",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Skorstensfejning, kommunal",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Bygningsforsikring",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 2001,
+      "kategori": "Omkostning",
+      "navn": "Foreningsbidrag",
+      "indhold": [
+        {
+          "tekst": "Grundejerforeningsbidrag",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Fællesforeningsbidrag",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 3000,
+      "kategori": "Omkostning",
+      "navn": "Renholdelse",
+      "indhold": [
+        {
+          "tekst": "Trappevask",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Vinduespudsning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Rengøring af fællesarealer",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 3001,
+      "kategori": "Omkostning",
+      "navn": "Ejendommens el, vand og varme",
+      "indhold": [
+        {
+          "tekst": "Elektricitet til fællesarealer",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Vand til fællesarealer - ejendommens andel",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Varme til fællesarealer - ejendommens andel",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 3002,
+      "kategori": "Omkostning",
+      "navn": "Kommunikation",
+      "indhold": [
+        {
+          "tekst": "Internet",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Telefon",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 4000,
+      "kategori": "Omkostning",
+      "navn": "Vedligeholdelse af grønne områder",
+      "indhold": [
+        {
+          "tekst": "Ejendomsservice af grønne områder",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Snerydning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Saltning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Hækklipning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Beplantning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Havearbejde",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Vedligeholdelse af grønne områder",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Skadedyrsbekæmpelse",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 4001,
+      "kategori": "Omkostning",
+      "navn": "Vedligeholdelse af bygning",
+      "indhold": [
+        {
+          "tekst": "Rensning af tagrender",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Rensning af tag",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Container- og affaldsservice",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Malerarbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Tømrerarbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Murerarbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "VVS-arbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Elektrikerarbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Gulvarbejde, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Tagreparationer, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Facadereparationer, vedligeholdelse",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Reparation af vinduer og døre",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Reparation af kloak og afløb",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Låseservice",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Reparation af hårde hvidevarer",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Reparation af køkkeninventar",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Reparation af badeværelser",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 5000,
+      "kategori": "Omkostning",
+      "navn": "Serviceomkostninger",
+      "indhold": [
+        {
+          "tekst": "Elevatorservice",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på varmeanlæg",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på ventilationsanlæg",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på brandanlæg",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på sprinkleranlæg",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på adgangskontrol",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på porttelefon",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på CTS/BMS-anlæg",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Service på pumper",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6000,
+      "kategori": "Omkostning",
+      "navn": "Ejendomsadministrator",
+      "indhold": [
+        {
+          "tekst": "Administratorhonorar",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6001,
+      "kategori": "Omkostning",
+      "navn": "Revision og regnskabsmæssig assistance",
+      "indhold": [
+        {
+          "tekst": "Bogføring, revision og anden regnskabsmæssig assistance",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6002,
+      "kategori": "Omkostning",
+      "navn": "Juridisk bistand",
+      "indhold": [
+        {
+          "tekst": "Honorar til advokat",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6003,
+      "kategori": "Omkostning",
+      "navn": "Bankgebyrer",
+      "indhold": [
+        {
+          "tekst": "Overførselsgebyr, hævegebyr, netbankgebyr",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 6004,
+      "kategori": "Omkostning",
+      "navn": "IT-omkostninger",
+      "indhold": [
+        {
+          "tekst": "IT-system til ejendomsadministration",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Lejeadministrationssystem",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6005,
+      "kategori": "Omkostning",
+      "navn": "Kontorholdsomkostninger",
+      "indhold": [
+        {
+          "tekst": "Papir, mapper, toner, kuglepenne",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6006,
+      "kategori": "Omkostning",
+      "navn": "Mindre nyanskaffelser",
+      "indhold": [
+        {
+          "tekst": "Mindre nyanskaffelser",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6007,
+      "kategori": "Omkostning",
+      "navn": "Annoncering og reklame",
+      "indhold": [
+        {
+          "tekst": "Annoncering af ledige lejemål",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6008,
+      "kategori": "Omkostning",
+      "navn": "Rådgivningshonorar vedr. ejendom",
+      "indhold": [
+        {
+          "tekst": "Udlejningshonorar",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Mæglerhonorar ved udlejning",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Ingeniørhonorarer ved almindelig drift",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Arkitekthonorarer ved almindelig drift",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 6009,
+      "kategori": "Omkostning",
+      "navn": "Sikkerhed og vagt",
+      "indhold": [
+        {
+          "tekst": "Sikkerheds- og vagttjeneste",
+          "inklusiveMoms": true
+        },
+        {
+          "tekst": "Alarmabonnement",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 7000,
+      "kategori": "Omkostning",
+      "navn": "Andre finansielle omkostninger",
+      "indhold": [
+        {
+          "tekst": "Renteomkostninger på realkreditlån",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Bidrag til realkreditinstitut",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Renteomkostninger på kassekredit",
+          "inklusiveMoms": false
+        },
+        {
+          "tekst": "Amortisering af låneomkostninger på realkreditlån",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 7001,
+      "kategori": "Indtægt",
+      "navn": "Andre finansielle indtægter",
+      "indhold": [
+        {
+          "tekst": "Renteindtægter på bankkonti",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 8000,
+      "kategori": "Omkostning/indtægt",
+      "navn": "Dagsværdiregulering af investeringsejendom",
+      "indhold": [
+        {
+          "tekst": "Dagsværdiregulering af investeringsejendom",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 9000,
+      "kategori": "Omkostning",
+      "navn": "Selskabsskat",
+      "indhold": [
+        {
+          "tekst": "Selskabsskat",
+          "inklusiveMoms": false
+        }
+      ]
+    },
+    {
+      "nummer": 20000,
+      "kategori": "Aktiver",
+      "navn": "Investeringsejendomme",
+      "indhold": [
+        {
+          "tekst": "Investeringsejendomme",
+          "inklusiveMoms": null
+        },
+        {
+          "tekst": "Forbedringer, tømrer, murer, vvs, arkitekt, ingeniør, el",
+          "inklusiveMoms": true
+        }
+      ]
+    },
+    {
+      "nummer": 20001,
+      "kategori": "Aktiver",
+      "navn": "Akkumulerede dagsværdireguleringer på investeringsejendomme",
+      "indhold": [
+        {
+          "tekst": "Positive og negative dagsværdireguleringer",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 20002,
+      "kategori": "Aktiver",
+      "navn": "Tilgodehavende leje",
+      "indhold": [
+        {
+          "tekst": "Tilgodehavende lejeindtægter, opkrævede ikke betalt leje",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 20003,
+      "kategori": "Aktiver",
+      "navn": "Periodeafgrænsningsposter",
+      "indhold": [
+        {
+          "tekst": "Periodiserede forsikringer",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 20004,
+      "kategori": "Aktiver",
+      "navn": "Bankkonto",
+      "indhold": [
+        {
+          "tekst": "Indbetalinger og udbetalinger",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30000,
+      "kategori": "Passiver",
+      "navn": "Aktiekapital",
+      "indhold": [
+        {
+          "tekst": "Aktiekapital",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30001,
+      "kategori": "Passiver",
+      "navn": "Overført resultat fra tidligere år",
+      "indhold": [
+        {
+          "tekst": "Overført resultat fra tidligere år",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30002,
+      "kategori": "Passiver",
+      "navn": "Realkreditlån",
+      "indhold": [
+        {
+          "tekst": "Realkreditlån, afdrag på realkreditlån",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30003,
+      "kategori": "Passiver",
+      "navn": "Kassekredit",
+      "indhold": [
+        {
+          "tekst": "Indbetalinger og udbetalinger",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30004,
+      "kategori": "Passiver",
+      "navn": "Andre kreditorer",
+      "indhold": [
+        {
+          "tekst": "Alle køb på kredit",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30005,
+      "kategori": "Passiver",
+      "navn": "Salgsmoms",
+      "indhold": [
+        {
+          "tekst": "Salgsmoms",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30006,
+      "kategori": "Passiver",
+      "navn": "Købsmoms",
+      "indhold": [
+        {
+          "tekst": "Købsmoms",
+          "inklusiveMoms": null
+        }
+      ]
+    },
+    {
+      "nummer": 30007,
+      "kategori": "Passiver",
+      "navn": "Momsafregning",
+      "indhold": [
+        {
+          "tekst": "Momsafregning",
+          "inklusiveMoms": null
+        }
+      ]
+    }
+  ]
+}
