@@ -34,19 +34,26 @@ describe("Boks 1 (6.2)", () => {
     expect(knapper[0]).toHaveAttribute("aria-current", "step");
   });
 
-  it("skifter bilagstekst, når et andet bilag vælges i statusbaren", async () => {
+  it("gør senere bilag grå, så man ikke kan gå frem, før bilaget er godkendt", async () => {
     const bruger = userEvent.setup();
     const opgave = visOpgave();
-    await bruger.click(screen.getByRole("button", { name: /^Bilag 3,/ }));
-    expect(screen.getByText(opgave.bilag[2].tekst, { exact: false })).toBeInTheDocument();
+    const statusbar = screen.getByRole("navigation", { name: "Bilagenes status" });
+    const knapper = within(statusbar).getAllByRole("button");
+    expect(knapper[0]).toBeEnabled();
+    for (const knap of knapper.slice(1)) expect(knap).toBeDisabled();
+    await bruger.click(knapper[2]);
+    expect(screen.getByText(opgave.bilag[0].tekst, { exact: false })).toBeInTheDocument();
   });
 
-  it("viser en besked om, at [Kontroller] og [Næste bilag] kommer i fase 4", async () => {
+  it("har [Næste bilag] grå, indtil det aktuelle bilag er godkendt", () => {
+    visOpgave();
+    expect(screen.getByRole("button", { name: "Næste bilag" })).toBeDisabled();
+  });
+
+  it("viser en besked om, at [Kontroller] kommer i fase 4", async () => {
     const bruger = userEvent.setup();
     visOpgave();
     await bruger.click(screen.getByRole("button", { name: "Kontroller" }));
-    expect(screen.getByRole("status")).toHaveTextContent("kommer i fase 4");
-    await bruger.click(screen.getByRole("button", { name: "Næste bilag" }));
     expect(screen.getByRole("status")).toHaveTextContent("kommer i fase 4");
   });
 
@@ -152,14 +159,8 @@ describe("indtastning (6.4)", () => {
     expect(within(tkonto(20004)).queryByText("B1")).not.toBeInTheDocument();
   });
 
-  it("låser posteringer fra andre bilag og viser dem med bilagsnummer", async () => {
-    const bruger = userEvent.setup();
+  it("viser kontonummer og kontonavn i samme overskrift", () => {
     visOpgave();
-    await bruger.type(screen.getByLabelText("Debet beløb for 20004 Bankkonto"), "500{Enter}");
-    await bruger.click(screen.getByRole("button", { name: /^Bilag 2,/ }));
-    const bank = tkonto(20004);
-    expect(within(bank).getByText("B1")).toBeInTheDocument();
-    expect(within(bank).getByText("500,00")).toBeInTheDocument();
-    expect(within(bank).queryByLabelText(/Ret beløb/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "20001 Akkumulerede dagsværdireguleringer på investeringsejendomme" })).toBeInTheDocument();
   });
 });

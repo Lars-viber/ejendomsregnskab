@@ -122,10 +122,10 @@ function NyPostering({ konto, side, onTilfoej }: { konto: Konto; side: Side } & 
 export function TKonto({ konto, saldo, posteringer, aktivtBilag, kanBogfoere, onTilfoej, onRet, onSlet }: TKontoProps) {
   return (
     <article className="tkonto" aria-label={`${konto.nummer} ${konto.navn}`}>
-      <header className="tkonto-hoved">
-        <span className="kontonummer">{konto.nummer}</span>
-        <h3>{konto.navn}</h3>
-      </header>
+      {/* Kontonavnet står i direkte forlængelse af kontonummeret og ombrydes ved behov. */}
+      <h3 className="tkonto-hoved">
+        <span className="kontonummer">{konto.nummer}</span> {konto.navn}
+      </h3>
       <div className="tkonto-sider" aria-hidden="true">
         <span>Debet</span>
         <span>Kredit</span>

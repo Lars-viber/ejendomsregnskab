@@ -4,6 +4,7 @@
  * Alle konti og indholdslinjer findes i kontoplan.json; det kontrolleres af testene.
  */
 import { formaterBeloeb } from "./beloeb";
+import { likviditetsformulering, momsformulering } from "./formuleringer";
 import type { Momsstatus } from "./momsstatus";
 import { formaterDato, type Bilag, type Opgave, type Saldo, type Side } from "./opgave";
 import type { Variant } from "./variant";
@@ -27,24 +28,23 @@ const LEJE: Record<Momsstatus, Lejedata> = {
 /** Momsfradragsprocent ved delvis moms: 96.000 / 180.000 = 53,33 %, rundet op = 54 %. */
 const MOMSFRADRAGSPROCENT = 54;
 
-function momsformulering(momsstatus: Momsstatus): string {
-  if (momsstatus === "momsfri") return "Der kan ikke afløftes moms, da ejendommen er momsfri.";
-  if (momsstatus === "delvis") {
-    return `Der kan afløftes delvis moms, da ejendommen er delvis momsregistreret (momsfradragsprocenten er ${MOMSFRADRAGSPROCENT} %).`;
-  }
-  return "Der kan afløftes fuld moms, da ejendommen er fuldt momsregistreret.";
+function momstekst(momsstatus: Momsstatus): string {
+  if (momsstatus === "momsfri") return momsformulering("momsfri");
+  if (momsstatus === "delvis") return momsformulering("delvis", { momsfradragsprocent: MOMSFRADRAGSPROCENT });
+  return momsformulering("fuld");
 }
 
 function lejetekst(momsstatus: Momsstatus, dato: string): string {
   const leje = LEJE[momsstatus];
   const indledning = `Ejendomsselskabet Ejendommen A/S opkræver den ${dato} husleje for 4. kvartal (oktober–december) hos ejendommens lejere.`;
   if (momsstatus === "momsfri") {
-    return `${indledning} Lejeindtægter (ikke momspligtig) udgør ${beloeb(leje.momsfri)} Beløbet er indbetalt på bankkonto.`;
+    return `${indledning} Lejeindtægter (ikke momspligtig) udgør ${beloeb(leje.momsfri)} ${likviditetsformulering("indbetaltBank", 1)}`;
   }
   if (momsstatus === "delvis") {
-    return `${indledning} Lejeindtægter (momspligtig) udgør ${beloeb(leje.momspligtig * 1.25)} inklusive moms, og lejeindtægter (ikke momspligtig) udgør ${beloeb(leje.momsfri)} Beløbet er indbetalt på bankkonto.`;
+    // To beløb i samme bilag, så likviditetsformuleringen står i flertal.
+    return `${indledning} Lejeindtægter (momspligtig) udgør ${beloeb(leje.momspligtig * 1.25)} inklusive moms, og lejeindtægter (ikke momspligtig) udgør ${beloeb(leje.momsfri)} ${likviditetsformulering("indbetaltBank", 2)}`;
   }
-  return `${indledning} Lejeindtægter (momspligtig) udgør ${beloeb(leje.momspligtig * 1.25)} inklusive moms. Beløbet er opkrævet, men endnu ikke indbetalt af lejer.`;
+  return `${indledning} Lejeindtægter (momspligtig) udgør ${beloeb(leje.momspligtig * 1.25)} inklusive moms. ${likviditetsformulering("opkraevetIkkeIndbetalt", 1)}`;
 }
 
 function danBilag(momsstatus: Momsstatus, aar: number): Bilag[] {
@@ -65,7 +65,7 @@ function danBilag(momsstatus: Momsstatus, aar: number): Bilag[] {
     {
       nummer: 2,
       dato: datoer[1],
-      tekst: `Nordlys Forsikring A/S fremsender den ${d[1]} præmie for bygningsforsikring på ${beloeb(15_300)} Forsikringen dækker perioden november indeværende regnskabsår til og med april efterfølgende regnskabsår. Der kan ikke afløftes moms, da beløbet er faktureret uden moms. Bilaget er betalt via bankkonto.`,
+      tekst: `Nordlys Forsikring A/S fremsender den ${d[1]} præmie for bygningsforsikring på ${beloeb(15_300)} Forsikringen dækker perioden november indeværende regnskabsår til og med april efterfølgende regnskabsår. ${momsformulering("faktureretUdenMoms")} ${likviditetsformulering("bankkonto", 1)}`,
       indhold: [
         { konto: 2000, indhold: "Bygningsforsikring" },
         { konto: 20003, indhold: "Periodiserede forsikringer" },
@@ -74,19 +74,19 @@ function danBilag(momsstatus: Momsstatus, aar: number): Bilag[] {
     {
       nummer: 3,
       dato: datoer[2],
-      tekst: `Rørmester Holm ApS fakturerer den ${d[2]} VVS-arbejde, vedligeholdelse, på ejendommens faldstammer med ${beloeb(20_000)} inklusive moms. ${momsformulering(momsstatus)} Beløbet er skyldigt.`,
+      tekst: `Rørmester Holm ApS fakturerer den ${d[2]} VVS-arbejde, vedligeholdelse, på ejendommens faldstammer med ${beloeb(20_000)} inklusive moms. ${momstekst(momsstatus)} ${likviditetsformulering("skyldig", 1)}`,
       indhold: [{ konto: 4001, indhold: "VVS-arbejde, vedligeholdelse" }],
     },
     {
       nummer: 4,
       dato: datoer[3],
-      tekst: `Byadministration ApS opkræver den ${d[3]} administratorhonorar for 4. kvartal med ${beloeb(15_000)} inklusive moms. ${momsformulering(momsstatus)} Bilaget er betalt via kassekredit.`,
+      tekst: `Byadministration ApS opkræver den ${d[3]} administratorhonorar for 4. kvartal med ${beloeb(15_000)} inklusive moms. ${momstekst(momsstatus)} ${likviditetsformulering("kassekredit", 1)}`,
       indhold: [{ konto: 6000, indhold: "Administratorhonorar" }],
     },
     {
       nummer: 5,
       dato: datoer[4],
-      tekst: `Andelskassen Midt indsætter den ${d[4]} renteindtægter på bankkonti med ${beloeb(1_234.56)} Beløbet er indbetalt på bankkonto.`,
+      tekst: `Andelskassen Midt indsætter den ${d[4]} renteindtægter på bankkonti med ${beloeb(1_234.56)} ${likviditetsformulering("indbetaltBank", 1)}`,
       indhold: [{ konto: 7001, indhold: "Renteindtægter på bankkonti" }],
     },
   ];

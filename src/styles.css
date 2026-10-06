@@ -284,6 +284,8 @@ h2 {
 .boks1 {
   flex: none;
   display: grid;
+  /* minmax(0, 1fr) sikrer, at intet i Boks 1 kan blive bredere end vinduet. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 4px;
   max-height: 25vh;
@@ -297,16 +299,15 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 4px 16px;
   min-width: 0;
 }
 
+/* Overskriften må ombrydes, så knapperne altid kan ses helt. */
 .boks1-top h1 {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
   color: var(--primaer-moerk);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .boks1-info {
@@ -337,14 +338,16 @@ h2 {
 
 .boks1-bund {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 4px 16px;
+  min-width: 0;
 }
 
 .instruktion {
-  flex: none;
-  margin: 0;
+  flex: 0 1 auto;
+  margin: 0 0 0 auto;
   color: var(--primaer-moerk);
 }
 
@@ -374,12 +377,7 @@ h2 {
   background: var(--lysblaa);
 }
 
-.statusbar button.er-paabegyndt {
-  background: var(--lysblaa);
-  border-color: var(--sekundaer);
-}
-
-.statusbar button.er-aktiv {
+.statusbar button.er-vist {
   color: white;
   background: var(--sekundaer);
   border-color: var(--sekundaer);
@@ -392,8 +390,16 @@ h2 {
   border-color: var(--groen);
 }
 
+.statusbar button.er-godkendt.er-vist {
+  box-shadow: 0 0 0 3px rgba(39, 131, 105, 0.25);
+}
+
+/* Senere bilag er grå og kan ikke vælges. */
 .statusbar button:disabled {
-  opacity: 0.35;
+  color: #9aa8b4;
+  background: #eef1f4;
+  border-color: #d3dae1;
+  opacity: 1;
 }
 
 .statusbar-tekst {
@@ -451,24 +457,18 @@ h2 {
 }
 
 .tkonto-hoved {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  margin: 0;
   padding: 4px 6px;
   border-bottom: 2px solid var(--tekst);
 }
 
 .kontonummer {
-  flex: none;
+  display: inline-block;
   padding: 0 5px;
   color: white;
   background: var(--sekundaer);
   border-radius: 4px;
   font-weight: 700;
-}
-
-.tkonto-hoved h3 {
-  min-width: 0;
 }
 
 .tkonto-sider,

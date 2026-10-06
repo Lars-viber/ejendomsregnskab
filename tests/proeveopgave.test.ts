@@ -74,6 +74,14 @@ describe.each(MOMSSTATUSSER)("prøveopgave: %s", (status) => {
     }
   });
 
+  it("bruger flertal i likviditetsformuleringen, når bilaget nævner flere beløb", () => {
+    for (const bilag of opgave.bilag) {
+      const antalBeloeb = (bilag.tekst.match(/\d kr\./g) ?? []).length;
+      if (antalBeloeb > 1) expect(bilag.tekst).not.toMatch(/Beløbet /);
+      else expect(bilag.tekst).not.toMatch(/Beløbene /);
+    }
+  });
+
   it("angiver momsfradragsprocent kun ved delvis moms", () => {
     expect(opgave.momsfradragsprocent !== null).toBe(status === "delvis");
   });
