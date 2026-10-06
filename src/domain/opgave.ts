@@ -1,3 +1,4 @@
+import type { Likviditet } from "./formuleringer";
 import { KONTOPLAN, opgoerelse, type Konto } from "./kontoplan";
 import type { Momsstatus } from "./momsstatus";
 import type { Variant } from "./variant";
@@ -20,26 +21,54 @@ export interface Indholdshenvisning {
   indhold: string;
 }
 
+/** Én linje i facit for et bilag. */
+export interface FacitLinje {
+  konto: number;
+  side: Side;
+  /** Beløb i øre, altid større end 0. */
+  oere: number;
+}
+
+export type Bilagstype =
+  | "leje"
+  | "forsikring"
+  | "realkredit"
+  | "administrator"
+  | "vedligeholdelse"
+  | "forbedring"
+  | "dagsvaerdi"
+  | "amortisering"
+  | "momsafslutning"
+  | "momsbetaling"
+  | "omkostning"
+  | "kassekreditrenter"
+  | "renteindtaegter"
+  | "tidligereSkyldig"
+  | "lejerIndbetaler";
+
 export interface Bilag {
   nummer: number;
   /** Dato som ÅÅÅÅ-MM-DD. */
   dato: string;
   /** Bilagsteksten som én sammenhængende tekst (6.2). */
   tekst: string;
+  type: Bilagstype;
+  likviditet: Likviditet;
   indhold: Indholdshenvisning[];
+  /** Den korrekte bogføring af bilaget; bruges af [Kontroller] i fase 4. */
+  facit: FacitLinje[];
 }
 
 export interface Opgave {
   variant: Variant;
   /** Årstallet låses, når opgaven dannes (8.1). */
   aar: number;
+  generatorversion: number;
   /** Kun ved delvis moms. */
   momsfradragsprocent: number | null;
   /** Saldi ved opgavens start. Konti uden saldo er ikke med. */
   saldi: Saldo[];
   bilag: Bilag[];
-  /** Markerer en fast prøveopgave (fase 2), indtil opgavegeneratoren findes. */
-  erProeveopgave: boolean;
 }
 
 /** Den studerendes postering i en T-konto. */
@@ -70,7 +99,7 @@ export function synligeKonti(momsstatus: Momsstatus): { resultat: Konto[]; balan
   };
 }
 
-const MAANEDER = [
+export const MAANEDER = [
   "januar", "februar", "marts", "april", "maj", "juni",
   "juli", "august", "september", "oktober", "november", "december",
 ];
@@ -79,4 +108,18 @@ const MAANEDER = [
 export function formaterDato(dato: string): string {
   const [aar, maaned, dag] = dato.split("-").map(Number);
   return `${dag}. ${MAANEDER[maaned - 1]} ${aar}`;
+}
+
+/** Saldo pr. konto som debet minus kredit (øre). */
+export function nettoSaldi(saldi: readonly Saldo[]): Map<number, number> {
+  const netto = new Map<number, number>();
+  for (const s of saldi) netto.set(s.konto, (netto.get(s.konto) ?? 0) + (s.side === "debet" ? s.oere : -s.oere));
+  return netto;
+}
+
+/** Lægger et bilags facit til saldiene (debet minus kredit). */
+export function bogfoerFacit(netto: Map<number, number>, facit: readonly FacitLinje[]): void {
+  for (const linje of facit) {
+    netto.set(linje.konto, (netto.get(linje.konto) ?? 0) + (linje.side === "debet" ? linje.oere : -linje.oere));
+  }
 }

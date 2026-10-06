@@ -31,7 +31,7 @@ function Statusbar({
         const godkendt = godkendte.includes(nummer);
         const vist = nummer === vistBilag;
         const status = !findes
-          ? "findes ikke i prøveopgaven"
+          ? "findes ikke"
           : godkendt
             ? "godkendt"
             : nummer === aktuelt
@@ -158,7 +158,6 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
             <span className="boks1-info">
               {" "}
               · Variant {opgave.variant.nummer} · {momsTekst}
-              {opgave.erProeveopgave && " · prøveopgave"}
             </span>
           </h1>
           <div className="boks1-knapper">

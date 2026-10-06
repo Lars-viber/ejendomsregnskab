@@ -2,12 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../src/App";
 import { Bogfoeringsbillede } from "../src/components/Bogfoeringsbillede";
+import { formaterBeloeb } from "../src/domain/beloeb";
 import type { Momsstatus } from "../src/domain/momsstatus";
-import { danProeveopgave } from "../src/domain/proeveopgave";
 import { danVariant } from "../src/domain/variant";
+import { danOpgave } from "../src/generator/generator";
 
 function visOpgave(momsstatus: Momsstatus = "delvis", onTilForside = () => {}) {
-  const opgave = danProeveopgave(danVariant(momsstatus, 483915), 2026);
+  const opgave = danOpgave(danVariant(momsstatus, 483915), 2026);
   render(<Bogfoeringsbillede opgave={opgave} onTilForside={onTilForside} />);
   return opgave;
 }
@@ -91,10 +92,11 @@ describe("kolonner med T-konti (6.3)", () => {
   });
 
   it("viser saldo ved opgavens start på den rigtige side", () => {
-    visOpgave("delvis");
+    const opgave = visOpgave("delvis");
     const bank = tkonto(20004);
+    const bankSaldo = opgave.saldi.find((s) => s.konto === 20004)!;
     expect(within(bank).getByText("Saldo").closest("[data-side]")).toHaveAttribute("data-side", "debet");
-    expect(within(bank).getByText("384.215,60")).toBeInTheDocument();
+    expect(within(bank).getByText(formaterBeloeb(bankSaldo.oere))).toBeInTheDocument();
     const leje = tkonto(1000);
     expect(within(leje).getByText("Saldo").closest("[data-side]")).toHaveAttribute("data-side", "kredit");
     expect(within(tkonto(8000)).queryByText("Saldo")).not.toBeInTheDocument();

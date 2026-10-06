@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "kontoplan": "node scripts/danKontoplan.ts",
-    "verify": "tsc -b && vitest run && vite build"
+    "verify": "tsc -b && vitest run && vite build",
+    "gennemgang": "vitest run --config vitest.gennemgang.config.ts"
   },
   "dependencies": {
     "react": "19.2.8",

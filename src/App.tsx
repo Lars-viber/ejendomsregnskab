@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Bogfoeringsbillede } from "./components/Bogfoeringsbillede";
 import { Forside } from "./components/Forside";
 import type { Opgave } from "./domain/opgave";
-import { danProeveopgave } from "./domain/proeveopgave";
+import { danOpgave } from "./generator/generator";
 import type { Variant } from "./domain/variant";
 
 export default function App() {
   const [opgave, setOpgave] = useState<Opgave | null>(null);
 
-  // Indtil opgavegeneratoren findes (fase 3), åbnes den faste prøveopgave for momsstatus.
-  const start = (variant: Variant) => setOpgave(danProeveopgave(variant));
+  // Årstallet er indeværende år og låses, når opgaven dannes (8.1).
+  const start = (variant: Variant) => setOpgave(danOpgave(variant, new Date().getFullYear()));
 
   if (opgave) {
     return <Bogfoeringsbillede key={opgave.variant.nummer} opgave={opgave} onTilForside={() => setOpgave(null)} />;
