@@ -1,0 +1,22 @@
+# Reference-applikationen må aldrig offentliggøres
+reference-app/
+
+# Afhængigheder og byggeresultater
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.vite/
+*.log
+
+# Lokale miljøfiler og editor-indstillinger
+.env
+.env.*
+.idea/
+.vscode/
+
+# Midlertidige filer fra Office og styresystem
+~$*
+.DS_Store
+Thumbs.db
+Desktop.ini
