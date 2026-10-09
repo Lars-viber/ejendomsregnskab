@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 
-// Danner lokalt/gennemgang.html (faglig gennemgang). Ikke en del af de almindelige tests.
+// Danner lokale arbejdsfiler i lokalt/ (gennemgang.html og klassifikation.html).
+// Ikke en del af de almindelige tests.
 export default defineConfig({
-  test: { globals: true, environment: "node", include: ["scripts/danGennemgang.run.ts"] },
+  test: { globals: true, environment: "node", include: ["scripts/*.run.ts"] },
 });
