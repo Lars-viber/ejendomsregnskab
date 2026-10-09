@@ -3,7 +3,7 @@
  *
  * Bruger kun: bilagsteksten, kontoplanen og – for afslutningen af momskontiene – saldiene i
  * T-kontiene lige før bilaget (dem kan den studerende se). Den kender intet til opgavegeneratoren.
- * Reglerne er skrevet ud fra Reference.docx afsnit 8.3, 8.4 og 9.
+ * Reglerne er skrevet ud fra Reference.docx afsnit 8.2, 8.3, 8.4 og 9 (version 1.4).
  */
 import { KONTOPLAN } from "../domain/kontoplan";
 
@@ -63,16 +63,28 @@ function fradragsberettigetMoms(tekst: string, inklMoms: number): number {
   if (!tekst.includes("inklusive moms")) return 0;
   const moms = inklMoms / 5; // 25 % moms af beløbet ekskl. moms = 1/5 af beløbet inkl. moms
   if (tekst.includes("Der kan afløftes fuld moms, da ejendommen er fuldt momsregistreret.")) return moms;
-  const delvis = /Der kan afløftes delvis moms, da ejendommen er delvis momsregistreret \(momsfradragsprocenten er (\d+) %\)\./.exec(tekst);
-  if (delvis) return (moms * Number(delvis[1])) / 100;
   if (tekst.includes("Der kan ikke afløftes moms, da ejendommen er momsfri.")) return 0;
+  // Delvis moms: fradraget afgøres af, hvilken del af ejendommen fakturaen vedrører (9.2).
+  if (tekst.includes("Fakturaen vedrører ejendommens boliglejemål, som er momsfritaget. Der kan ikke afløftes moms.")) return 0;
+  if (tekst.includes("Fakturaen vedrører ejendommens momsregistrerede erhvervslejemål. Der kan afløftes fuld moms.")) return moms;
+  const hele = /Fakturaen vedrører hele ejendommen\. Der kan afløftes delvis moms med momsfradragsprocenten \((\d+) %\)\./.exec(tekst);
+  if (hele) return (moms * Number(hele[1])) / 100;
   throw new Error("Bilaget er inklusive moms, men momsforholdet er ikke angivet.");
 }
+
+/** Andre beskrivelser af en indholdslinje, som Reference.docx tillader (8.2). */
+const ALIAS: readonly { tekst: string; konto: number }[] = [
+  // "Reparation af badeværelser" beskrives ved momspligtig ejendom og erhvervsdelen sådan.
+  { tekst: "reparation af toilet- og omklædningsfaciliteter", konto: 4001 },
+];
 
 /** Finder kontoen ud fra den længste indholdstekst fra kontoplanen, der står i bilagsteksten. */
 function kontoForIndhold(tekst: string): { konto: number; kategori: string } {
   const smaa = tekst.toLowerCase();
   let bedst: { konto: number; kategori: string; laengde: number } | null = null;
+  for (const alias of ALIAS) {
+    if (smaa.includes(alias.tekst)) bedst = { konto: alias.konto, kategori: "Omkostning", laengde: alias.tekst.length };
+  }
   for (const konto of KONTOPLAN) {
     if (konto.kategori === "Aktiver" || konto.kategori === "Passiver") continue;
     for (const linje of konto.indhold) {
@@ -173,15 +185,15 @@ export function laesBilag(tekst: string, saldiFoer: ReadonlyMap<number, number>)
     return b;
   }
 
-  if (tekst.includes("Dagsværdireguleringen")) {
+  if (tekst.includes("dagsværdiregulering på")) {
     const x = eneste(tekst);
-    if (tekst.includes("opskrivning")) {
+    if (tekst.includes("positiv dagsværdiregulering")) {
       post(b, 20001, x);
       post(b, 8000, -x);
-    } else if (tekst.includes("nedskrivning")) {
+    } else if (tekst.includes("negativ dagsværdiregulering")) {
       post(b, 8000, x);
       post(b, 20001, -x);
-    } else throw new Error("Det fremgår ikke, om det er en op- eller nedskrivning.");
+    } else throw new Error("Det fremgår ikke, om dagsværdireguleringen er positiv eller negativ.");
     return b;
   }
 

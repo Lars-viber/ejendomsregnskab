@@ -36,8 +36,14 @@ describe("likviditetsformuleringer (8.3)", () => {
 describe("momsformuleringer (8.3)", () => {
   it("står ordret som i Reference.docx", () => {
     expect(momsformulering("momsfri")).toBe("Der kan ikke afløftes moms, da ejendommen er momsfri.");
-    expect(momsformulering("delvis", { momsfradragsprocent: 54 })).toBe(
-      "Der kan afløftes delvis moms, da ejendommen er delvis momsregistreret (momsfradragsprocenten er 54 %).",
+    expect(momsformulering("delvisBolig")).toBe(
+      "Fakturaen vedrører ejendommens boliglejemål, som er momsfritaget. Der kan ikke afløftes moms.",
+    );
+    expect(momsformulering("delvisErhverv")).toBe(
+      "Fakturaen vedrører ejendommens momsregistrerede erhvervslejemål. Der kan afløftes fuld moms.",
+    );
+    expect(momsformulering("delvisHele", { momsfradragsprocent: 54 })).toBe(
+      "Fakturaen vedrører hele ejendommen. Der kan afløftes delvis moms med momsfradragsprocenten (54 %).",
     );
     expect(momsformulering("fuld")).toBe("Der kan afløftes fuld moms, da ejendommen er fuldt momsregistreret.");
     expect(momsformulering("faktureretUdenMoms")).toBe(
@@ -51,7 +57,7 @@ describe("momsformuleringer (8.3)", () => {
     );
   });
 
-  it("kræver momsfradragsprocenten ved delvis moms", () => {
-    expect(() => momsformulering("delvis")).toThrow();
+  it("kræver momsfradragsprocenten, når fakturaen vedrører hele ejendommen", () => {
+    expect(() => momsformulering("delvisHele")).toThrow();
   });
 });

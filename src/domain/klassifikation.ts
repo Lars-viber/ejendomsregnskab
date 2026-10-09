@@ -1,30 +1,34 @@
 /**
- * Klassifikationsliste for kontoplanens momsbelagte indholdslinjer (Reference.docx 9.1 og 9.2, version 1.3).
+ * Klassifikationsliste for kontoplanens momsbelagte indholdslinjer (Reference.docx 8.2, 8.3, 9.1 og 9.2,
+ * version 1.4). Godkendt af projektejeren 9. oktober 2026.
  *
- * For hver linje: ved hvilke momsstatusser den må bruges, og ved delvis moms om fakturaen kan vedrøre
- * boligdelen, erhvervsdelen og/eller hele ejendommen, med eksempler på bilagstekstens beskrivelse.
- * FORSLAG til projektejerens godkendelse. Bruges ikke af generatoren endnu (fase 3b).
+ * For hver linje står den beskrivelse af ydelsen, som bilagsteksten bruger:
+ * - ved momsfri ejendom (ren boligejendom),
+ * - ved momspligtig ejendom (ren erhvervsejendom; må aldrig nævne eller antyde beboelse),
+ * - ved delvis moms for hver af de dele, fakturaen kan vedrøre (boligdelen, erhvervsdelen, hele ejendommen).
+ * Beskrivelsen nævner altid delen direkte (8.3). null = linjen kan ikke vedrøre den del.
+ * Kontoplanens indholdstekst indgår ordret, undtagen "Reparation af badeværelser" ved momspligtig
+ * ejendom og erhvervsdelen, som beskrives som "reparation af toilet- og omklædningsfaciliteter" (8.2).
  */
+
+export type Del = "bolig" | "erhverv" | "hele";
 
 export interface Klassifikation {
   konto: number;
   indhold: string;
-  /** Eksempel ved momsfri ejendom (ren boligejendom). null = bruges ikke. */
   momsfri: string | null;
-  /** Eksempel ved momspligtig ejendom (ren erhvervsejendom, ingen beboelse). null = bruges ikke. */
   momspligtig: string | null;
-  /** Delvis moms: eksempler pr. del. null = kan ikke vedrøre den del. */
   bolig: string | null;
   erhverv: string | null;
   hele: string | null;
-  /** Udfyldt, når udvikleren er i tvivl. */
-  tvivl?: string;
-  /** Kort bemærkning uden tvivl. */
   note?: string;
 }
 
+/** Den alternative beskrivelse af "Reparation af badeværelser" uden for boliger (Reference.docx 8.2). */
+export const TOILET_OG_OMKLAEDNING = "reparation af toilet- og omklædningsfaciliteter";
+
 export const KLASSIFIKATION: Klassifikation[] = [
-  // 1000 Lejeindtægter, momspligtige
+  // 1000 Lejeindtægter, momspligtige (salgsmoms – ikke en købsfaktura)
   {
     konto: 1000,
     indhold: "Lejeindtægter (momspligtig)",
@@ -43,9 +47,8 @@ export const KLASSIFIKATION: Klassifikation[] = [
     momsfri: "trappevask i ejendommens opgange for 4. kvartal",
     momspligtig: "trappevask i ejendommens kontoropgange for 4. kvartal",
     bolig: "trappevask i boligopgangene for 4. kvartal",
-    erhverv: "trappevask i erhvervsdelens opgang for 4. kvartal",
-    hele: null,
-    tvivl: "Forudsætter, at boliger og erhverv har hver sine opgange. Har de fælles opgang, vil trappevask vedrøre hele ejendommen.",
+    erhverv: "trappevask i erhvervsopgangen for 4. kvartal",
+    hele: "trappevask i ejendommens fællesopgang for 4. kvartal",
   },
   {
     konto: 3000,
@@ -53,9 +56,9 @@ export const KLASSIFIKATION: Klassifikation[] = [
     momsfri: "vinduespudsning af vinduerne i ejendommens opgange",
     momspligtig: "vinduespudsning af ejendommens kontor- og butiksvinduer",
     bolig: "vinduespudsning af vinduerne i boligopgangene",
-    erhverv: "vinduespudsning af butiksvinduerne i stueetagen",
+    erhverv: "vinduespudsning af butiksvinduerne i erhvervslejemålene i stueetagen",
     hele: null,
-    note: "Vinduer kan opdeles (Reference.docx 9.2), derfor ikke hele ejendommen.",
+    note: "Vinduer kan opdeles (9.2), derfor ikke hele ejendommen.",
   },
   {
     konto: 3000,
@@ -122,10 +125,9 @@ export const KLASSIFIKATION: Klassifikation[] = [
     indhold: "Ejendomsservice af grønne områder",
     momsfri: "ejendomsservice af grønne områder i ejendommens gårdanlæg",
     momspligtig: "ejendomsservice af grønne områder omkring kontorbygningen",
-    bolig: null,
-    erhverv: null,
+    bolig: "ejendomsservice af grønne områder i gårdhaven ved boligerne",
+    erhverv: "ejendomsservice af grønne områder ved erhvervslejemålenes indgang",
     hele: "ejendomsservice af grønne områder omkring ejendommen",
-    tvivl: "Ved blandede ejendomme bruges gårdanlægget ofte kun af boligerne. Skal udendørsarealer altid regnes som hele ejendommen?",
   },
   {
     konto: 4000,
@@ -157,8 +159,8 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4000,
     indhold: "Beplantning",
-    momsfri: "beplantning med nye buske i gårdanlægget",
-    momspligtig: "beplantning med nye buske ved hovedindgangen",
+    momsfri: "beplantning med nye buske i ejendommens gårdanlæg",
+    momspligtig: "beplantning med nye buske ved ejendommens hovedindgang",
     bolig: null,
     erhverv: null,
     hele: "beplantning med nye buske langs ejendommens facade",
@@ -166,7 +168,7 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4000,
     indhold: "Havearbejde",
-    momsfri: "havearbejde med efterårsoprydning i gårdanlægget",
+    momsfri: "havearbejde med efterårsoprydning i ejendommens gårdanlæg",
     momspligtig: "havearbejde med efterårsoprydning på ejendommens udendørsarealer",
     bolig: null,
     erhverv: null,
@@ -188,7 +190,7 @@ export const KLASSIFIKATION: Klassifikation[] = [
     momspligtig: "skadedyrsbekæmpelse i ejendommens kælder og affaldsrum",
     bolig: "skadedyrsbekæmpelse i en af ejendommens lejligheder",
     erhverv: "skadedyrsbekæmpelse i et af ejendommens erhvervslejemål",
-    hele: "skadedyrsbekæmpelse i ejendommens kælder og affaldsrum",
+    hele: "skadedyrsbekæmpelse i ejendommens fælles kælder og affaldsrum",
   },
 
   // 4001 Vedligeholdelse af bygning
@@ -204,11 +206,11 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4001,
     indhold: "Rensning af tag",
-    momsfri: "rensning af tag for mos og alger",
-    momspligtig: "rensning af tag for mos og alger",
+    momsfri: "rensning af tag på hele ejendommen for mos og alger",
+    momspligtig: "rensning af tag på hele ejendommen for mos og alger",
     bolig: null,
     erhverv: null,
-    hele: "rensning af tag for mos og alger",
+    hele: "rensning af tag på hele ejendommen for mos og alger",
     note: "Tag er Reference.docx' eget eksempel på hele ejendommen.",
   },
   {
@@ -259,8 +261,8 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4001,
     indhold: "Elektrikerarbejde, vedligeholdelse",
-    momsfri: "elektrikerarbejde, vedligeholdelse, på belysningen i opgangene",
-    momspligtig: "elektrikerarbejde, vedligeholdelse, på belysningen i kontoropgangene",
+    momsfri: "elektrikerarbejde, vedligeholdelse, på belysningen i ejendommens opgange",
+    momspligtig: "elektrikerarbejde, vedligeholdelse, på belysningen i ejendommens kontoropgange",
     bolig: "elektrikerarbejde, vedligeholdelse, i en af ejendommens lejligheder",
     erhverv: "elektrikerarbejde, vedligeholdelse, i et af ejendommens erhvervslejemål",
     hele: "elektrikerarbejde, vedligeholdelse, på ejendommens fælles hovedtavle",
@@ -277,11 +279,11 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4001,
     indhold: "Tagreparationer, vedligeholdelse",
-    momsfri: "tagreparationer, vedligeholdelse, efter en efterårsstorm",
-    momspligtig: "tagreparationer, vedligeholdelse, efter en efterårsstorm",
+    momsfri: "tagreparationer, vedligeholdelse, på ejendommens tag efter en efterårsstorm",
+    momspligtig: "tagreparationer, vedligeholdelse, på ejendommens tag efter en efterårsstorm",
     bolig: null,
     erhverv: null,
-    hele: "tagreparationer, vedligeholdelse, efter en efterårsstorm",
+    hele: "tagreparationer, vedligeholdelse, på ejendommens tag efter en efterårsstorm",
     note: "Tag er Reference.docx' eget eksempel på hele ejendommen.",
   },
   {
@@ -289,10 +291,9 @@ export const KLASSIFIKATION: Klassifikation[] = [
     indhold: "Facadereparationer, vedligeholdelse",
     momsfri: "facadereparationer, vedligeholdelse, på ejendommens gavl",
     momspligtig: "facadereparationer, vedligeholdelse, på ejendommens gavl",
-    bolig: null,
-    erhverv: "facadereparationer, vedligeholdelse, på butiksfacaden i stueetagen",
+    bolig: "facadereparationer, vedligeholdelse, på facaden ud for boligerne",
+    erhverv: "facadereparationer, vedligeholdelse, på butiksfacaden ved erhvervslejemålene",
     hele: "facadereparationer, vedligeholdelse, på ejendommens gavl",
-    tvivl: "Facaden er fælles, men butiksfacaden i stueetagen kan henføres til erhvervsdelen. Er erhvervsdelen et rimeligt valg her?",
   },
   {
     konto: 4001,
@@ -302,7 +303,7 @@ export const KLASSIFIKATION: Klassifikation[] = [
     bolig: "reparation af vinduer og døre i en af ejendommens lejligheder",
     erhverv: "reparation af vinduer og døre i et af ejendommens erhvervslejemål",
     hele: null,
-    note: "Vinduer kan opdeles (Reference.docx 9.2), derfor ikke hele ejendommen.",
+    note: "Vinduer kan opdeles (9.2), derfor ikke hele ejendommen.",
   },
   {
     konto: 4001,
@@ -316,8 +317,8 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 4001,
     indhold: "Låseservice",
-    momsfri: "låseservice med udskiftning af cylindre i hoveddørene",
-    momspligtig: "låseservice med udskiftning af cylindre i hovedindgangen",
+    momsfri: "låseservice med udskiftning af cylindre i ejendommens hoveddøre",
+    momspligtig: "låseservice med udskiftning af cylindre i ejendommens hovedindgang",
     bolig: "låseservice med ny lås i en lejlighed ved fraflytning",
     erhverv: "låseservice med ny lås i et erhvervslejemål ved fraflytning",
     hele: "låseservice med udskiftning af cylindre i ejendommens fælles hoveddøre",
@@ -330,7 +331,6 @@ export const KLASSIFIKATION: Klassifikation[] = [
     bolig: "reparation af hårde hvidevarer i en af ejendommens lejligheder",
     erhverv: "reparation af hårde hvidevarer i tekøkkenet i et af ejendommens kontorlejemål",
     hele: null,
-    tvivl: "Ved momspligtig og ved erhvervsdelen kun i et tekøkken eller en frokoststue. Er det plausibelt nok, eller skal linjen kun bruges ved momsfri og boligdelen?",
   },
   {
     konto: 4001,
@@ -340,17 +340,16 @@ export const KLASSIFIKATION: Klassifikation[] = [
     bolig: "reparation af køkkeninventar i en af ejendommens lejligheder",
     erhverv: "reparation af køkkeninventar i frokoststuen i et af ejendommens kontorlejemål",
     hele: null,
-    tvivl: "Som ovenfor: ved momspligtig og ved erhvervsdelen kun i et tekøkken eller en frokoststue.",
   },
   {
     konto: 4001,
     indhold: "Reparation af badeværelser",
     momsfri: "reparation af badeværelser i en af ejendommens lejligheder",
-    momspligtig: "reparation af badeværelser (bad og toilet til medarbejdere) i et af ejendommens kontorlejemål",
+    momspligtig: `${TOILET_OG_OMKLAEDNING} i et af ejendommens kontorlejemål`,
     bolig: "reparation af badeværelser i en af ejendommens lejligheder",
-    erhverv: "reparation af badeværelser (bad og toilet til medarbejdere) i et af ejendommens kontorlejemål",
+    erhverv: `${TOILET_OG_OMKLAEDNING} i et af ejendommens erhvervslejemål`,
     hele: null,
-    tvivl: "Badeværelser forbindes med boliger, og 9.1 forbyder at antyde beboelse ved momspligtig ejendom. Forslag: brug kun linjen ved momsfri og boligdelen. Reference.docx 8.2 siger dog, at alle linjer må bruges ved alle momsstatusser.",
+    note: "Ved momspligtig ejendom og erhvervsdelen beskrives linjen som \"reparation af toilet- og omklædningsfaciliteter\" (8.2).",
   },
 
   // 5000 Serviceomkostninger
@@ -359,25 +358,24 @@ export const KLASSIFIKATION: Klassifikation[] = [
     indhold: "Elevatorservice",
     momsfri: "elevatorservice på ejendommens elevator for 4. kvartal",
     momspligtig: "elevatorservice på ejendommens elevatorer for 4. kvartal",
-    bolig: null,
-    erhverv: null,
-    hele: "elevatorservice på ejendommens elevator for 4. kvartal",
-    tvivl: "I nogle blandede ejendomme betjener elevatoren kun boligopgangen. Forslaget er at regne den som hele ejendommen.",
+    bolig: "elevatorservice på elevatoren i boligopgangen for 4. kvartal",
+    erhverv: "elevatorservice på elevatoren i erhvervsdelen for 4. kvartal",
+    hele: "elevatorservice på ejendommens fælles elevator for 4. kvartal",
   },
   {
     konto: 5000,
     indhold: "Service på varmeanlæg",
-    momsfri: "service på varmeanlæg inden fyringssæsonen",
-    momspligtig: "service på varmeanlæg inden fyringssæsonen",
+    momsfri: "service på varmeanlæg i ejendommens varmecentral inden fyringssæsonen",
+    momspligtig: "service på varmeanlæg i ejendommens varmecentral inden fyringssæsonen",
     bolig: null,
     erhverv: null,
-    hele: "service på varmeanlæg inden fyringssæsonen",
+    hele: "service på varmeanlæg i ejendommens varmecentral inden fyringssæsonen",
   },
   {
     konto: 5000,
     indhold: "Service på ventilationsanlæg",
     momsfri: "service på ventilationsanlæg med filterskift i ejendommens kælder",
-    momspligtig: "service på ventilationsanlæg med filterskift",
+    momspligtig: "service på ventilationsanlæg med filterskift i ejendommens kontorer",
     bolig: null,
     erhverv: "service på ventilationsanlæg med filterskift i et af ejendommens erhvervslejemål",
     hele: "service på ventilationsanlæg med filterskift i ejendommens fælles anlæg",
@@ -385,17 +383,17 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 5000,
     indhold: "Service på brandanlæg",
-    momsfri: "service på brandanlæg ved det årlige eftersyn",
-    momspligtig: "service på brandanlæg ved det årlige eftersyn",
+    momsfri: "service på brandanlæg i hele ejendommen ved det årlige eftersyn",
+    momspligtig: "service på brandanlæg i hele ejendommen ved det årlige eftersyn",
     bolig: null,
     erhverv: null,
-    hele: "service på brandanlæg ved det årlige eftersyn",
+    hele: "service på brandanlæg i hele ejendommen ved det årlige eftersyn",
   },
   {
     konto: 5000,
     indhold: "Service på sprinkleranlæg",
     momsfri: "service på sprinkleranlæg i ejendommens parkeringskælder",
-    momspligtig: "service på sprinkleranlæg ved det årlige eftersyn",
+    momspligtig: "service på sprinkleranlæg i ejendommens kontorer ved det årlige eftersyn",
     bolig: null,
     erhverv: "service på sprinkleranlæg i ejendommens butikslejemål",
     hele: "service på sprinkleranlæg i ejendommens parkeringskælder",
@@ -403,30 +401,29 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 5000,
     indhold: "Service på adgangskontrol",
-    momsfri: "service på adgangskontrol for 4. kvartal",
-    momspligtig: "service på adgangskontrol for 4. kvartal",
+    momsfri: "service på adgangskontrol ved ejendommens indgange for 4. kvartal",
+    momspligtig: "service på adgangskontrol ved ejendommens indgange for 4. kvartal",
     bolig: null,
     erhverv: null,
-    hele: "service på adgangskontrol for 4. kvartal",
+    hele: "service på adgangskontrol ved ejendommens indgange for 4. kvartal",
   },
   {
     konto: 5000,
     indhold: "Service på porttelefon",
-    momsfri: "service på porttelefon for 4. kvartal",
-    momspligtig: "service på porttelefon ved hovedindgangen for 4. kvartal",
+    momsfri: "service på porttelefon ved ejendommens hovedindgang for 4. kvartal",
+    momspligtig: "service på porttelefon ved ejendommens hovedindgang for 4. kvartal",
     bolig: "service på porttelefon i boligopgangene for 4. kvartal",
-    erhverv: null,
-    hele: null,
-    tvivl: "Porttelefoner hører typisk til boligopgangene. Forslaget er boligdelen ved delvis moms.",
+    erhverv: "service på porttelefon ved erhvervsindgangen for 4. kvartal",
+    hele: "service på porttelefon ved ejendommens hovedindgang for 4. kvartal",
   },
   {
     konto: 5000,
     indhold: "Service på CTS/BMS-anlæg",
-    momsfri: "service på CTS/BMS-anlæg for 4. kvartal",
-    momspligtig: "service på CTS/BMS-anlæg for 4. kvartal",
+    momsfri: "service på CTS/BMS-anlæg for hele ejendommen for 4. kvartal",
+    momspligtig: "service på CTS/BMS-anlæg for hele ejendommen for 4. kvartal",
     bolig: null,
     erhverv: null,
-    hele: "service på CTS/BMS-anlæg for 4. kvartal",
+    hele: "service på CTS/BMS-anlæg for hele ejendommen for 4. kvartal",
   },
   {
     konto: 5000,
@@ -442,27 +439,27 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 6000,
     indhold: "Administratorhonorar",
-    momsfri: "administratorhonorar for ejendomsadministration i 4. kvartal",
-    momspligtig: "administratorhonorar for ejendomsadministration i 4. kvartal",
+    momsfri: "administratorhonorar for administration af hele ejendommen i 4. kvartal",
+    momspligtig: "administratorhonorar for administration af hele ejendommen i 4. kvartal",
     bolig: null,
     erhverv: null,
-    hele: "administratorhonorar for ejendomsadministration i 4. kvartal",
+    hele: "administratorhonorar for administration af hele ejendommen i 4. kvartal",
     note: "Administration er Reference.docx' eget eksempel på hele ejendommen.",
   },
   {
     konto: 6001,
     indhold: "Bogføring, revision og anden regnskabsmæssig assistance",
-    momsfri: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med kvartalsregnskabet",
-    momspligtig: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med kvartalsregnskabet",
+    momsfri: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med ejendommens kvartalsregnskab",
+    momspligtig: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med ejendommens kvartalsregnskab",
     bolig: null,
     erhverv: null,
-    hele: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med kvartalsregnskabet",
+    hele: "bogføring, revision og anden regnskabsmæssig assistance i forbindelse med ejendommens kvartalsregnskab",
     note: "Revision er Reference.docx' eget eksempel på hele ejendommen.",
   },
   {
     konto: 6002,
     indhold: "Honorar til advokat",
-    momsfri: "honorar til advokat for bistand i en lejesag",
+    momsfri: "honorar til advokat for bistand i en lejesag med en af ejendommens lejere",
     momspligtig: "honorar til advokat for bistand ved genforhandling af en erhvervslejekontrakt",
     bolig: "honorar til advokat for bistand i en lejesag med en boliglejer",
     erhverv: "honorar til advokat for bistand ved genforhandling af en erhvervslejekontrakt",
@@ -471,38 +468,38 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 6004,
     indhold: "IT-system til ejendomsadministration",
-    momsfri: "IT-system til ejendomsadministration med licens for 4. kvartal",
-    momspligtig: "IT-system til ejendomsadministration med licens for 4. kvartal",
+    momsfri: "IT-system til ejendomsadministration med licens for hele ejendommen for 4. kvartal",
+    momspligtig: "IT-system til ejendomsadministration med licens for hele ejendommen for 4. kvartal",
     bolig: null,
     erhverv: null,
-    hele: "IT-system til ejendomsadministration med licens for 4. kvartal",
+    hele: "IT-system til ejendomsadministration med licens for hele ejendommen for 4. kvartal",
   },
   {
     konto: 6004,
     indhold: "Lejeadministrationssystem",
-    momsfri: "lejeadministrationssystem med licens for 4. kvartal",
-    momspligtig: "lejeadministrationssystem med licens for 4. kvartal",
+    momsfri: "lejeadministrationssystem med licens for hele ejendommen for 4. kvartal",
+    momspligtig: "lejeadministrationssystem med licens for hele ejendommen for 4. kvartal",
     bolig: null,
     erhverv: null,
-    hele: "lejeadministrationssystem med licens for 4. kvartal",
+    hele: "lejeadministrationssystem med licens for hele ejendommen for 4. kvartal",
   },
   {
     konto: 6005,
     indhold: "Papir, mapper, toner, kuglepenne",
-    momsfri: "papir, mapper, toner, kuglepenne til ejendomskontoret",
-    momspligtig: "papir, mapper, toner, kuglepenne til ejendomskontoret",
+    momsfri: "papir, mapper, toner, kuglepenne til ejendommens administration",
+    momspligtig: "papir, mapper, toner, kuglepenne til ejendommens administration",
     bolig: null,
     erhverv: null,
-    hele: "papir, mapper, toner, kuglepenne til ejendomskontoret",
+    hele: "papir, mapper, toner, kuglepenne til ejendommens administration",
   },
   {
     konto: 6006,
     indhold: "Mindre nyanskaffelser",
-    momsfri: "mindre nyanskaffelser i form af nye cykelstativer til gården",
-    momspligtig: "mindre nyanskaffelser i form af nye cykelstativer ved hovedindgangen",
+    momsfri: "mindre nyanskaffelser i form af nye cykelstativer til ejendommens gård",
+    momspligtig: "mindre nyanskaffelser i form af nye cykelstativer ved ejendommens hovedindgang",
     bolig: "mindre nyanskaffelser i form af en ny tørretumbler til boligernes fællesvaskeri",
     erhverv: "mindre nyanskaffelser i form af ny skiltning til erhvervslejemålene",
-    hele: "mindre nyanskaffelser i form af nye cykelstativer til gården",
+    hele: "mindre nyanskaffelser i form af nye cykelstativer til ejendommens gård",
   },
   {
     konto: 6007,
@@ -530,7 +527,6 @@ export const KLASSIFIKATION: Klassifikation[] = [
     bolig: "mæglerhonorar ved udlejning af en lejlighed",
     erhverv: "mæglerhonorar ved udlejning af et erhvervslejemål",
     hele: null,
-    tvivl: "Erhvervsmæglere bruges mest ved erhvervsudlejning. Er mæglerhonorar ved udlejning af en lejlighed plausibelt (momsfri og boligdelen)?",
   },
   {
     konto: 6008,
@@ -544,11 +540,11 @@ export const KLASSIFIKATION: Klassifikation[] = [
   {
     konto: 6008,
     indhold: "Arkitekthonorarer ved almindelig drift",
-    momsfri: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af facaden",
-    momspligtig: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af facaden",
+    momsfri: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af ejendommens facade",
+    momspligtig: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af ejendommens facade",
     bolig: null,
     erhverv: null,
-    hele: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af facaden",
+    hele: "arkitekthonorarer ved almindelig drift for rådgivning om vedligeholdelse af ejendommens facade",
   },
   {
     konto: 6009,
@@ -569,7 +565,7 @@ export const KLASSIFIKATION: Klassifikation[] = [
     hele: "alarmabonnement for ejendommens fælles kælder for 4. kvartal",
   },
 
-  // 20000 Investeringsejendomme – forbedringer
+  // 20000 Investeringsejendomme – forbedringer (projekterne står i tekster.ts)
   {
     konto: 20000,
     indhold: "Forbedringer, tømrer, murer, vvs, arkitekt, ingeniør, el",
@@ -581,3 +577,10 @@ export const KLASSIFIKATION: Klassifikation[] = [
     note: "Afsenderen skal passe til ydelsen (8.3): arkitekt- og ingeniørfirmaer projekterer, håndværkere og entreprenører udfører. Nye vinduer kan opdeles og vedrører derfor boligdelen eller erhvervsdelen (9.2).",
   },
 ];
+
+/** Klassifikationen for en indholdslinje. */
+export function klassifikation(konto: number, indhold: string): Klassifikation {
+  const k = KLASSIFIKATION.find((x) => x.konto === konto && x.indhold === indhold);
+  if (!k) throw new Error(`Indholdslinjen "${indhold}" (${konto}) mangler i klassifikationslisten.`);
+  return k;
+}

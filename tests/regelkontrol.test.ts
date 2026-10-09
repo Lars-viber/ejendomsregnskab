@@ -10,7 +10,15 @@ import { kontrollerOpgave } from "../src/regler/regelkontrol";
  */
 const delvis = danOpgave(danVariant("delvis", 4242), 2026);
 const momsfri = danOpgave(danVariant("momsfri", 4242), 2026);
+const momspligtig = danOpgave(danVariant("momspligtig", 4242), 2026);
 const kopi = (o: Opgave): Opgave => structuredClone(o);
+/** Første opgave (momsfri), der indeholder et bilag af typen. */
+const medBilagstype = (type: string): Opgave => {
+  for (let n = 1; ; n++) {
+    const o = danOpgave(danVariant("momsfri", n), 2026);
+    if (o.bilag.some((b) => b.type === type)) return kopi(o);
+  }
+};
 const fejlI = (o: Opgave) => kontrollerOpgave(o).join("\n");
 
 describe("regelkontrollen", () => {
@@ -21,9 +29,11 @@ describe("regelkontrollen", () => {
 
   it("opdager en bankkonto i overtræk (10.2)", () => {
     const o = kopi(delvis);
+    // Bankkontoen sættes i overtræk (kreditsaldo på 100 kr.) ved start; 30001 justeres, så debet = kredit.
     const bank = o.saldi.find((s) => s.konto === 20004)!;
     const overfoert = o.saldi.find((s) => s.konto === 30001)!;
-    overfoert.oere -= bank.oere - 100;
+    overfoert.oere -= bank.oere + 100;
+    bank.side = "kredit";
     bank.oere = 100;
     expect(fejlI(o)).toMatch(/Bankkontoen er ikke positiv/);
   });
@@ -111,5 +121,80 @@ describe("regelkontrollen", () => {
     leje.oere += 100_000;
     o.saldi.find((s) => s.konto === 30001)!.oere -= 100_000;
     expect(fejlI(o)).toMatch(/Lejen på 1001 er ikke den samme i alle fire kvartaler/);
+  });
+
+  it("godkender en gyldig momspligtig opgave", () => {
+    expect(kontrollerOpgave(momspligtig)).toEqual([]);
+  });
+
+  it("(a) opdager beboelse i en bilagstekst ved momspligtig ejendom (9.1)", () => {
+    for (const ord of ["en lejlighed", "boligportaler", "et badeværelse", "beboerne"]) {
+      const o = kopi(momspligtig);
+      const bilag = o.bilag.find((b) => b.type === "vedligeholdelse")!;
+      bilag.tekst = bilag.tekst.replace(". Fakturaen lyder på", ` ved ${ord}. Fakturaen lyder på`);
+      expect(fejlI(o)).toMatch(/nævner eller antyder beboelse/);
+    }
+  });
+
+  it("(b) opdager en faktura ved delvis moms uden præcis én af de tre formuleringer (8.3)", () => {
+    const o = kopi(delvis);
+    const bilag = o.bilag.find((b) => b.type === "administrator")!;
+    bilag.tekst = bilag.tekst.replace(/Fakturaen vedrører hele ejendommen\. Der kan afløftes delvis moms med momsfradragsprocenten \(\d+ %\)\./, "");
+    expect(fejlI(o)).toMatch(/ikke præcis én af de tre formuleringer/);
+  });
+
+  it("(b) opdager en beskrivelse, der ikke nævner delen direkte (8.3)", () => {
+    const o = kopi(delvis);
+    const bilag = o.bilag.find((b) => b.tekst.includes("Fakturaen vedrører ejendommens momsregistrerede erhvervslejemål"))!;
+    bilag.tekst = bilag.tekst.replace(/den (\d{1,2}\. \S+ \d{4}) .*?\. Fakturaen lyder på/, "den $1 diverse arbejde. Fakturaen lyder på");
+    expect(fejlI(o)).toMatch(/nævner ikke direkte/);
+  });
+
+  it("(b) opdager en opgave med delvis moms uden et bilag af hver type (9.2)", () => {
+    const o = kopi(delvis);
+    for (const bilag of o.bilag) bilag.tekst = bilag.tekst.replace("Fakturaen vedrører ejendommens boliglejemål, som er momsfritaget. Der kan ikke afløftes moms.", "");
+    expect(fejlI(o)).toMatch(/intet bilag, der vedrører boligdelen/);
+  });
+
+  it("(c) opdager et periodiseringsbilag uden 30 dage pr. måned og 360 dage pr. år (8.4)", () => {
+    const o = kopi(momsfri);
+    const bilag = o.bilag.find((b) => b.type === "forsikring")!;
+    bilag.tekst = bilag.tekst.replace(" Der regnes med 30 dage pr. måned og 360 dage pr. år.", "");
+    expect(fejlI(o)).toMatch(/oplyser ikke 30 dage pr\. måned og 360 dage pr\. år/);
+  });
+
+  it("(d) opdager ordene opskrivning og nedskrivning (8.4)", () => {
+    const o = kopi(momsfri);
+    const bilag = o.bilag.find((b) => b.type === "dagsvaerdi")!;
+    bilag.tekst = bilag.tekst.replace(/(positiv|negativ) dagsværdiregulering/, "opskrivning");
+    expect(fejlI(o)).toMatch(/bruger "opskrivning" eller "nedskrivning"/);
+  });
+
+  it("(e) opdager tidligere opkrævet leje uden oplysning om kontoen (8.3)", () => {
+    const o = medBilagstype("lejerIndbetaler");
+    const bilag = o.bilag.find((b) => b.type === "lejerIndbetaler")!;
+    bilag.tekst = bilag.tekst.replace(" Beløbet er indbetalt på bankkonto.", "");
+    expect(fejlI(o)).toMatch(/oplyser ikke, hvilken konto lejen indbetales på/);
+  });
+
+  it("(e) opdager en tidligere skyldig regning uden oplysning om kontoen (8.3)", () => {
+    const o = medBilagstype("tidligereSkyldig");
+    const bilag = o.bilag.find((b) => b.type === "tidligereSkyldig")!;
+    bilag.tekst = bilag.tekst.replace(/ Bilaget er betalt via (bankkonto|kassekredit)\./, "");
+    expect(fejlI(o)).toMatch(/angiver ikke, hvordan den tidligere skyldige regning betales/);
+  });
+
+  it("(f) opdager ental, når et bilag nævner flere beløb (8.3)", () => {
+    const o = kopi(delvis);
+    const bilag = o.bilag.find((b) => b.type === "realkredit")!;
+    bilag.tekst = bilag.tekst.replace("da beløbene er faktureret uden moms", "da beløbet er faktureret uden moms");
+    expect(fejlI(o)).toMatch(/mangler "Der kan ikke afløftes moms, da beløbene er faktureret uden moms\."/);
+  });
+
+  it("(g) opdager et resultat før skat under 5 % af lejeindtægterne (10.2)", () => {
+    const o = kopi(momsfri);
+    const leje = o.saldi.find((s) => s.konto === 1001)!.oere * (4 / 3);
+    o.saldi.find((s) => s.konto === 6005)!.oere += Math.round(leje * 0.6);
+    expect(fejlI(o)).toMatch(/resultat før skat er under 5 %/);
   });
 });

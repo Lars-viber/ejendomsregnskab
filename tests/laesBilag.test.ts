@@ -20,13 +20,35 @@ describe("læsning af bilagstekster", () => {
     });
   });
 
-  it("delvis moms: kun fradragsprocenten af momsen er købsmoms (9.2)", () => {
+  it("delvis moms, hele ejendommen: kun fradragsprocenten af momsen er købsmoms (9.2)", () => {
     const tekst = trappevask(
-      "Der kan afløftes delvis moms, da ejendommen er delvis momsregistreret (momsfradragsprocenten er 60 %).",
+      "Fakturaen vedrører hele ejendommen. Der kan afløftes delvis moms med momsfradragsprocenten (60 %).",
       "Beløbet er skyldigt.",
     );
     // moms 2.500, heraf 60 % = 1.500 til købsmoms; resten 1.000 indgår i omkostningen.
     expect(bogfoering(tekst)).toEqual({ 3000: 11_000, 30006: 1_500, 30004: -12_500 });
+  });
+
+  it("delvis moms, boligdelen: intet fradrag (9.2)", () => {
+    const tekst = trappevask(
+      "Fakturaen vedrører ejendommens boliglejemål, som er momsfritaget. Der kan ikke afløftes moms.",
+      "Bilaget er betalt via bankkonto.",
+    );
+    expect(bogfoering(tekst)).toEqual({ 3000: 12_500, 20004: -12_500 });
+  });
+
+  it("delvis moms, erhvervsdelen: fuldt fradrag (9.2)", () => {
+    const tekst = trappevask(
+      "Fakturaen vedrører ejendommens momsregistrerede erhvervslejemål. Der kan afløftes fuld moms.",
+      "Bilaget er betalt via bankkonto.",
+    );
+    expect(bogfoering(tekst)).toEqual({ 3000: 10_000, 30006: 2_500, 20004: -12_500 });
+  });
+
+  it("reparation af toilet- og omklædningsfaciliteter bogføres på 4001 (8.2)", () => {
+    const tekst =
+      "VVS ApS fakturerer den 3. november 2026 reparation af toilet- og omklædningsfaciliteter i et af ejendommens kontorlejemål. Fakturaen lyder på 10.000,00 kr. inklusive moms. Der kan afløftes fuld moms, da ejendommen er fuldt momsregistreret. Bilaget er betalt via bankkonto.";
+    expect(bogfoering(tekst)).toEqual({ 4001: 8_000, 30006: 2_000, 20004: -10_000 });
   });
 
   it("momspligtig: fuld købsmoms (9.1)", () => {
@@ -42,7 +64,7 @@ describe("læsning af bilagstekster", () => {
 
   it("bygningsforsikring periodiseres i hele måneder (8.4)", () => {
     const tekst =
-      "Forsikring A/S fremsender den 5. november 2026 præmie for bygningsforsikring på 24.000,00 kr. Forsikringen dækker perioden november indeværende regnskabsår til og med oktober efterfølgende regnskabsår. Der kan ikke afløftes moms, da beløbet er faktureret uden moms. Bilaget er betalt via bankkonto.";
+      "Forsikring A/S fremsender den 5. november 2026 præmie for bygningsforsikring på 24.000,00 kr. Forsikringen dækker perioden november indeværende regnskabsår til og med oktober efterfølgende regnskabsår. Der regnes med 30 dage pr. måned og 360 dage pr. år. Der kan ikke afløftes moms, da beløbet er faktureret uden moms. Bilaget er betalt via bankkonto.";
     // 12 måneder à 2.000 kr.; november og december vedrører indeværende år.
     expect(bogfoering(tekst)).toEqual({ 2000: 4_000, 20003: 20_000, 20004: -24_000 });
   });
@@ -65,8 +87,11 @@ describe("læsning af bilagstekster", () => {
 
   it("dagsværdiregulering, amortisering og renteindtægter (8.4)", () => {
     expect(
-      bogfoering("Valuar ApS har den 30. december 2026 opgjort dagsværdien af investeringsejendommen. Dagsværdireguleringen for året er en nedskrivning på 150.000,00 kr. Bilaget har ingen likviditetseffekt."),
+      bogfoering("Valuar ApS har den 30. december 2026 opgjort dagsværdien af investeringsejendommen. Der skal bogføres en negativ dagsværdiregulering på 150.000,00 kr. Bilaget har ingen likviditetseffekt."),
     ).toEqual({ 8000: 150_000, 20001: -150_000 });
+    expect(
+      bogfoering("Valuar ApS har den 30. december 2026 opgjort dagsværdien af investeringsejendommen. Der skal bogføres en positiv dagsværdiregulering på 90.000,00 kr. Bilaget har ingen likviditetseffekt."),
+    ).toEqual({ 20001: 90_000, 8000: -90_000 });
     expect(
       bogfoering("Selskabets revisor har den 30. december 2026 opgjort årets amortisering af låneomkostninger på realkreditlån til 8.000,00 kr. Bilaget har ingen likviditetseffekt."),
     ).toEqual({ 7000: 8_000, 30002: -8_000 });
@@ -81,7 +106,7 @@ describe("læsning af bilagstekster", () => {
       bogfoering("Den 2. december 2026 betales regningen på 5.000,00 kr. fra VVS ApS, som er bogført som skyldig i bilag 4. En tidligere skyldig regning betales. Bilaget er betalt via kassekredit."),
     ).toEqual({ 30004: 5_000, 30003: -5_000 });
     expect(
-      bogfoering("Den 2. november 2026 indbetaler lejerne 205.000,00 kr. af huslejen, der blev opkrævet i bilag 1. Lejer indbetaler tidligere opkrævet leje."),
+      bogfoering("Den 2. november 2026 indbetaler lejerne 205.000,00 kr. af huslejen, der blev opkrævet i bilag 1. Lejer indbetaler tidligere opkrævet leje. Beløbet er indbetalt på bankkonto."),
     ).toEqual({ 20004: 205_000, 20002: -205_000 });
   });
 

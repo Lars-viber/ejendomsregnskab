@@ -21,6 +21,7 @@ import {
 } from "../domain/opgave";
 import type { Variant } from "../domain/variant";
 import { kontrollerOpgave } from "../regler/regelkontrol";
+import { klassifikation, type Del } from "../domain/klassifikation";
 import { danTilfaeldig, type Tilfaeldig } from "./tilfaeldig";
 import {
   BANKER,
@@ -28,7 +29,9 @@ import {
   FORSIKRINGSSELSKABER,
   INDHOLDSTEKSTER,
   REALKREDITINSTITUTTER,
+  REGNINGER_FOER_START,
   VALUARER,
+  type Indholdstekst,
 } from "./tekster";
 
 export const GENERATOR_VERSION = 1;
@@ -55,6 +58,19 @@ const kr = (beloeb: number) => `${formaterBeloeb(beloeb)} kr.`;
 /** Første bogstav med lille, undtagen forkortelser som "VVS" og "IT". */
 function smaaForbogstav(tekst: string): string {
   return /^[A-ZÆØÅ]{2}/.test(tekst) ? tekst : tekst.charAt(0).toLowerCase() + tekst.slice(1);
+}
+
+/**
+ * Hvad en momsbelagt faktura vedrører: ved momsfri og momspligtig ejendom hele ejendommen af den type,
+ * ved delvis moms boligdelen, erhvervsdelen eller hele ejendommen (Reference.docx 9.1 og 9.2).
+ */
+type Anvendelse = "momsfri" | "momspligtig" | Del;
+
+/** Afsendere, der passer til ydelsen og til, om den vedrører boliger eller erhverv (8.3). */
+function afsendereFor(tekst: Indholdstekst, anvendelse: Anvendelse): readonly string[] {
+  if (anvendelse === "momsfri" || anvendelse === "bolig") return tekst.afsendereBolig ?? tekst.afsendere;
+  if (anvendelse === "momspligtig" || anvendelse === "erhverv") return tekst.afsendereErhverv ?? tekst.afsendere;
+  return tekst.afsendere;
 }
 
 type Placering =
@@ -102,8 +118,12 @@ interface Plan {
   /** Konto for omkostningen eller indtægten. */
   konto?: number;
   inklMoms?: boolean;
-  /** Tekst efter indholdsteksten i en almindelig omkostning. */
+  /** Tekst efter indholdsteksten i en omkostning uden moms. */
   beskrivelse?: string;
+  /** Momsbelagte fakturaer: hvad fakturaen vedrører, ønsket bogført beløb og beskrivelsen af ydelsen. */
+  anvendelse?: Anvendelse;
+  bogfoertMaal?: number;
+  frase?: string;
   forsikring?: { start: number; maaneder: number; maanedspraemie: number };
   realkredit?: { rente: number; bidrag: number; afdrag: number };
   projekt?: string;
@@ -122,14 +142,21 @@ function byg(variant: Variant, forsoeg: number): Model | null {
 
   // Trin 1: momsfradragsprocent (9.2).
   const p = status === "delvis" ? r.heltal(40, 65) : null;
-  const fradragsandel = status === "momsfri" ? 0 : status === "delvis" ? p! / 100 : 1;
-  // Momsen (brutto/5) og ved delvis moms også p % af momsen skal give hele kroner (9.3).
-  const bruttoTrin = 5 * (status === "delvis" ? 100 / gcd(p!, 100) : 1) * KR;
-  const fradrag = (brutto: number) => (status === "momsfri" ? 0 : ((brutto / 5) * (p ?? 100)) / 100);
-  const momsbelagt = (bogfoert: number, min = 2_000 * KR, max = 150_000 * KR) => {
-    const brutto = afrund(bogfoert / (1 - 0.2 * fradragsandel), bruttoTrin);
-    return Math.min(Math.max(brutto, oprund(min, bruttoTrin)), nedrund(max, bruttoTrin));
+  // Fradragsandelen afhænger af, hvad fakturaen vedrører (9.1 og 9.2).
+  const fradragsandel = (a: Anvendelse) => (a === "momsfri" || a === "bolig" ? 0 : a === "hele" ? p! / 100 : 1);
+  // Momsen (brutto/5) skal give hele kroner; ved hele ejendommen også p % af momsen (9.3).
+  const bruttoTrin = (a: Anvendelse) => 5 * (a === "hele" ? 100 / gcd(p!, 100) : 1) * KR;
+  const fradrag = (brutto: number, a: Anvendelse) => {
+    if (a === "momsfri" || a === "bolig") return 0;
+    return a === "hele" ? ((brutto / 5) * p!) / 100 : brutto / 5;
   };
+  const momsbelagt = (bogfoert: number, a: Anvendelse, min = 2_000 * KR, max = 150_000 * KR) => {
+    const trin = bruttoTrin(a);
+    const brutto = afrund(bogfoert / (1 - 0.2 * fradragsandel(a)), trin);
+    return Math.min(Math.max(brutto, oprund(min, trin)), nedrund(max, trin));
+  };
+  // Købsmoms ved start: ved delvis moms med momsfradragsprocenten (10.3).
+  const startFradragsandel = status === "momsfri" ? 0 : status === "delvis" ? p! / 100 : 1;
   const medOere = (beloeb: number) => Math.round(beloeb); // beløb uden moms må have øre (9.3)
 
   // Trin 2: opgavens størrelse (10.2 og 10.3).
@@ -219,11 +246,11 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     type: "administrator",
     placering: { slags: "maaned", maaned: 10, andel: iv(0.05, 0.6) },
     indhold: [{ konto: 6000, indhold: "Administratorhonorar" }],
-    afsender: r.vaelg(INDHOLDSTEKSTER["Administratorhonorar"].afsendere),
-    beloeb: momsbelagt(niveau[6000] / 4),
+    afsender: "",
+    beloeb: 0,
+    bogfoertMaal: niveau[6000] / 4,
     konto: 6000,
     inklMoms: true,
-    beskrivelse: INDHOLDSTEKSTER["Administratorhonorar"].beskrivelse,
   });
 
   const konto4001 = KONTOPLAN.find((k) => k.nummer === 4001)!;
@@ -233,14 +260,16 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     type: "vedligeholdelse",
     placering: { slags: "maaned", maaned: r.vaelg(vedligeholdTekst.maaneder ?? [10, 11, 12]), andel: iv(0.05, 0.95) },
     indhold: [{ konto: 4001, indhold: vedligeholdLinje }],
-    afsender: r.vaelg(vedligeholdTekst.afsendere),
-    beloeb: momsbelagt(maalVedligehold * iv(0.08, 0.16, 0.1, 0.14)),
+    afsender: "",
+    beloeb: 0,
+    bogfoertMaal: maalVedligehold * iv(0.08, 0.16, 0.1, 0.14),
     konto: 4001,
     inklMoms: true,
-    beskrivelse: vedligeholdTekst.beskrivelse,
   });
 
-  const forbedring = r.vaelg(FORBEDRINGER);
+  // Forbedringen vedrører ved delvis moms boligdelen, erhvervsdelen eller hele ejendommen (9.2).
+  const forbedringAnvendelse: Anvendelse = status === "delvis" ? r.vaelg<Del>(["bolig", "erhverv", "hele"]) : status;
+  const forbedring = r.vaelg(FORBEDRINGER.filter((f) => f[forbedringAnvendelse]));
   const forbedringPlan: Plan = {
     type: "forbedring",
     placering: { slags: "maaned", maaned: r.heltal(10, 12), andel: iv(0.05, 0.95) },
@@ -249,7 +278,8 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     beloeb: 0, // fastlægges, når momsen kendes (9.4)
     konto: 20000,
     inklMoms: true,
-    projekt: forbedring.projekt,
+    anvendelse: forbedringAnvendelse,
+    projekt: forbedring[forbedringAnvendelse],
   };
   plan.push(forbedringPlan);
 
@@ -350,6 +380,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
   const pulje = KONTOPLAN.filter((k) => k.kategori === "Omkostning" && ![7000, 8000, 9000].includes(k.nummer)).flatMap((k) =>
     k.indhold
       .filter((l) => !UDELUKKET.has(l.tekst) && !(status === "momsfri" && l.tekst === "Dækningsafgift"))
+      .filter((l) => l.inklusiveMoms !== true || status === "delvis" || klassifikation(k.nummer, l.tekst)[status] !== null)
       .map((l) => ({ konto: k.nummer, tekst: l.tekst, inklMoms: l.inklusiveMoms === true })),
   );
   const valgte: typeof pulje = [];
@@ -375,14 +406,14 @@ function byg(variant: Variant, forsoeg: number): Model | null {
   for (const linje of valgte) {
     const tekster = INDHOLDSTEKSTER[linje.tekst];
     if (!tekster) throw new Error(`Mangler bilagstekst for indholdslinjen "${linje.tekst}".`);
-    let beloeb: number;
+    let beloeb = 0;
+    let bogfoertMaal: number | undefined;
     if (linje.inklMoms) {
       const bogfoert = GRUPPE.includes(linje.konto)
         ? maalVedligehold * iv(0.025, 0.07, 0.03, 0.05)
         : (niveau[linje.konto] / 4) * iv(0.7, 1.3, 0.85, 1.15);
       // Små kvartalsbeløb hæves til en tilfældig, plausibel faktura over minimumsrammen på 2.000 kr.
-      const mindst = iv(2_000, 4_500) * KR * (1 - 0.2 * fradragsandel);
-      beloeb = momsbelagt(Math.max(bogfoert, mindst));
+      bogfoertMaal = Math.max(bogfoert, iv(2_000, 4_500) * KR * 0.8);
     } else {
       const udenMoms: Record<string, () => number> = {
         "Grundskyld / ejendomsskatter": () => niveau[2000] * iv(0.3, 0.4),
@@ -401,8 +432,9 @@ function byg(variant: Variant, forsoeg: number): Model | null {
       type: "omkostning",
       placering: { slags: "maaned", maaned: r.vaelg(tekster.maaneder ?? [10, 11, 12]), andel: iv(0.05, 0.95) },
       indhold: [{ konto: linje.konto, indhold: linje.tekst }],
-      afsender: r.vaelg(tekster.afsendere),
+      afsender: linje.inklMoms ? "" : r.vaelg(tekster.afsendere),
       beloeb,
+      bogfoertMaal,
       konto: linje.konto,
       inklMoms: linje.inklMoms,
       beskrivelse: tekster.beskrivelse,
@@ -410,6 +442,35 @@ function byg(variant: Variant, forsoeg: number): Model | null {
   }
   plan.push(...oevrige);
   if (plan.length !== 20) return null;
+
+  // Hvad hver momsbelagt faktura vedrører, og dermed beløb, afsender og beskrivelse (9.1, 9.2 og 8.3).
+  const fakturaer = plan.filter((pl) => pl.inklMoms && pl.type !== "forbedring");
+  for (const pl of fakturaer) {
+    const k = klassifikation(pl.konto!, pl.indhold[0].indhold);
+    if (status !== "delvis") pl.anvendelse = status;
+    else pl.anvendelse = r.vaelg((["bolig", "erhverv", "hele"] as const).filter((d) => k[d] !== null));
+  }
+  if (status === "delvis") {
+    // Mindst én faktura af hver type (9.2); forbedringen tæller med.
+    for (const del of ["bolig", "erhverv", "hele"] as const) {
+      const alle = [...fakturaer, forbedringPlan];
+      if (alle.some((pl) => pl.anvendelse === del)) continue;
+      const kan = fakturaer.filter((pl) => {
+        if (klassifikation(pl.konto!, pl.indhold[0].indhold)[del] === null) return false;
+        // Skift kun en faktura, hvis dens nuværende type stadig findes på en anden faktura.
+        return alle.filter((x) => x.anvendelse === pl.anvendelse).length > 1;
+      });
+      if (kan.length === 0) return null;
+      r.vaelg(kan).anvendelse = del;
+    }
+  }
+  for (const pl of fakturaer) {
+    const a = pl.anvendelse!;
+    const k = klassifikation(pl.konto!, pl.indhold[0].indhold);
+    pl.frase = k[a]!;
+    pl.afsender = r.vaelg(afsendereFor(INDHOLDSTEKSTER[pl.indhold[0].indhold], a));
+    pl.beloeb = momsbelagt(pl.bogfoertMaal!, a);
+  }
 
   // Kronologisk rækkefølge; bilag 19 og 20 er momsbilagene (8.2).
   plan.sort((a, b) => {
@@ -422,7 +483,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
   const kassekreditStart = medOere(iv(60_000, 480_000, 100_000, 400_000) * KR);
   for (const pl of plan) if (pl.type === "kassekreditrenter") pl.beloeb = medOere(kassekreditStart * iv(0.012, 0.022));
 
-  const bogfoertBeloeb = (pl: Plan) => (pl.inklMoms ? pl.beloeb - fradrag(pl.beloeb) : pl.beloeb);
+  const bogfoertBeloeb = (pl: Plan) => (pl.inklMoms ? pl.beloeb - fradrag(pl.beloeb, pl.anvendelse!) : pl.beloeb);
   const q4Paa = (konto: number) =>
     plan.filter((pl) => pl.konto === konto && pl.type !== "renteindtaegter").reduce((s, pl) => s + bogfoertBeloeb(pl), 0);
   const q4Gruppe = GRUPPE.reduce((s, k) => s + q4Paa(k), 0);
@@ -451,7 +512,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     for (const k of KONTOPLAN) {
       if (k.kategori !== "Omkostning" || !k.indhold.every((l) => l.inklusiveMoms === true)) continue;
       const saldo = startResultat.get(k.nummer) ?? 0;
-      fradrag9 += (saldo / (1 + 0.25 * (1 - fradragsandel))) * 0.25 * fradragsandel;
+      fradrag9 += (saldo / (1 + 0.25 * (1 - startFradragsandel))) * 0.25 * startFradragsandel;
     }
     koebsmomsStart = afrund((fradrag9 / 3) * iv(0.9, 1.1, 0.95, 1.05), KR);
   }
@@ -467,19 +528,26 @@ function byg(variant: Variant, forsoeg: number): Model | null {
       if (pl.type === "momsafslutning") break;
       if (pl.type === "leje") salgsmoms += momspligtigKvartal / 4;
       if (pl.type === "forbedring") efterForbedring = true;
-      else if (pl.inklMoms) koebsmoms += fradrag(pl.beloeb);
+      else if (pl.inklMoms) koebsmoms += fradrag(pl.beloeb, pl.anvendelse!);
       if (salgsmoms - koebsmoms <= 0) return null;
       if (efterForbedring) plads = Math.min(plads, salgsmoms - koebsmoms);
     }
-    // Største brutto, hvis fradragsberettigede moms er mindre end pladsen.
-    const maksBrutto = nedrund(((plads - KR) * 5 * 100) / (p ?? 100), bruttoTrin);
-    if (fradrag(oprund(100_000 * KR, bruttoTrin)) < plads) {
-      const top = Math.min(750_000 * KR, maksBrutto);
-      forbedringPlan.beloeb = nedrund(iv(100_000 * KR, top), 1_000 * KR);
-      if (forbedringPlan.beloeb < 100_000 * KR || fradrag(forbedringPlan.beloeb) >= plads) forbedringPlan.beloeb = oprund(100_000 * KR, bruttoTrin);
+    const a = forbedringPlan.anvendelse!;
+    const trin = bruttoTrin(a);
+    if (fradragsandel(a) === 0) {
+      // Boligdelen: intet fradrag, så rammen 100.000–750.000 kr. gælder uændret.
+      forbedringPlan.beloeb = nedrund(iv(100_000, 750_000, 150_000, 600_000) * KR, 1_000 * KR);
     } else {
-      forbedringPlan.beloeb = maksBrutto;
-      if (forbedringPlan.beloeb < 20_000 * KR) return null;
+      // Største brutto, hvis fradragsberettigede moms er mindre end pladsen.
+      const maksBrutto = nedrund(((plads - KR) * 5) / fradragsandel(a), trin);
+      if (fradrag(oprund(100_000 * KR, trin), a) < plads) {
+        const top = Math.min(750_000 * KR, maksBrutto);
+        forbedringPlan.beloeb = nedrund(iv(100_000 * KR, top), 1_000 * KR);
+        if (forbedringPlan.beloeb < 100_000 * KR || fradrag(forbedringPlan.beloeb, a) >= plads) forbedringPlan.beloeb = oprund(100_000 * KR, trin);
+      } else {
+        forbedringPlan.beloeb = maksBrutto;
+        if (forbedringPlan.beloeb < 20_000 * KR) return null;
+      }
     }
   } else {
     forbedringPlan.beloeb = nedrund(iv(100_000, 750_000, 150_000, 600_000) * KR, 1_000 * KR);
@@ -569,7 +637,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
         const slutMaaned = MAANEDER[(f.start - 1 + f.maaneder - 1) % 12];
         const l = likviditet;
         tekst = (dato) =>
-          `${afsender} fremsender den ${dato} præmie for bygningsforsikring på ${kr(pl.beloeb)} Forsikringen dækker perioden ${MAANEDER[f.start - 1]} indeværende regnskabsår til og med ${slutMaaned} efterfølgende regnskabsår. ${momsformulering("faktureretUdenMoms")} ${likviditetsformulering(l, 1)}`;
+          `${afsender} fremsender den ${dato} præmie for bygningsforsikring på ${kr(pl.beloeb)} Forsikringen dækker perioden ${MAANEDER[f.start - 1]} indeværende regnskabsår til og med ${slutMaaned} efterfølgende regnskabsår. Der regnes med 30 dage pr. måned og 360 dage pr. år. ${momsformulering("faktureretUdenMoms")} ${likviditetsformulering(l, 1)}`;
         break;
       }
       case "realkredit": {
@@ -603,17 +671,20 @@ function byg(variant: Variant, forsoeg: number): Model | null {
         likviditet = valgt;
         betal(likviditet, pl.beloeb);
         if (likviditet === "skyldig") ubetalteRegninger.push({ nummer, afsender, beloeb: pl.beloeb });
-        const momsfradrag = pl.inklMoms ? fradrag(pl.beloeb) : 0;
+        const momsfradrag = pl.inklMoms ? fradrag(pl.beloeb, pl.anvendelse!) : 0;
         if (pl.inklMoms) koebsmoms += momsfradrag;
         facit.push(linje(pl.konto!, "debet", pl.beloeb - momsfradrag));
         if (momsfradrag > 0) facit.push(linje(30006, "debet", momsfradrag));
         facit.push(linje(kreditKonto(likviditet), "kredit", pl.beloeb));
+        const momsforhold = {
+          momsfri: "momsfri",
+          momspligtig: "fuld",
+          bolig: "delvisBolig",
+          erhverv: "delvisErhverv",
+          hele: "delvisHele",
+        } as const;
         const momssaetning = pl.inklMoms
-          ? status === "momsfri"
-            ? momsformulering("momsfri")
-            : status === "delvis"
-              ? momsformulering("delvis", { momsfradragsprocent: p! })
-              : momsformulering("fuld")
+          ? momsformulering(momsforhold[pl.anvendelse!], { momsfradragsprocent: p ?? undefined })
           : momsformulering("faktureretUdenMoms");
         const l = likviditet;
         const beloebstekst = `${kr(pl.beloeb)}${pl.inklMoms ? " inklusive moms." : ""}`;
@@ -628,6 +699,9 @@ function byg(variant: Variant, forsoeg: number): Model | null {
         } else if (pl.konto === 6003) {
           tekst = (dato) =>
             `${afsender} trækker den ${dato} gebyrer ${pl.beskrivelse} (overførselsgebyr, hævegebyr, netbankgebyr) med ${beloebstekst} ${momssaetning} ${likviditetsformulering(l, 1)}`;
+        } else if (pl.inklMoms) {
+          // Beskrivelsen fra den godkendte klassifikationsliste nævner delen direkte (8.3).
+          tekst = (dato) => `${afsender} ${verbum} den ${dato} ${pl.frase}. ${lyderPaa} ${momssaetning} ${likviditetsformulering(l, 1)}`;
         } else {
           const indhold = smaaForbogstav(pl.indhold[0].indhold);
           const komma = indhold.includes(",") ? "," : "";
@@ -653,12 +727,16 @@ function byg(variant: Variant, forsoeg: number): Model | null {
           beloeb = regning.beloeb;
           henvisning = () => `betales regningen på ${kr(beloeb)} fra ${regning.afsender}, som er bogført som skyldig i bilag ${regning.nummer}.`;
         } else {
-          beloeb = medOere(foerStartSkyldig * iv(0.25, 0.7));
-          if (beloeb < 2_000 * KR) return null;
+          // Beløbet skal passe til leverandøren (8.3) og kan højst være det skyldige ved start.
+          const loft = Math.min(foerStartSkyldig, 0.8 * kreditorStart) / KR;
+          const mulige = REGNINGER_FOER_START.filter((x) => x.min <= loft);
+          if (mulige.length === 0) return null;
+          const leverandoer = r.vaelg(mulige);
+          beloeb = medOere(iv(leverandoer.min, Math.min(leverandoer.max, loft)) * KR);
           foerStartSkyldig -= beloeb;
-          const fra = r.vaelg(Object.values(INDHOLDSTEKSTER).filter((t) => !t.afsendere.includes("Kommunen")));
-          const regningsafsender = r.vaelg(fra.afsendere);
-          henvisning = (aar) => `betales en regning på ${kr(beloeb)} fra ${regningsafsender}, som var bogført som skyldig før 1. oktober ${aar}.`;
+          const regningsafsender = r.vaelg(leverandoer.afsendere);
+          henvisning = (aar) =>
+            `betales en regning på ${kr(beloeb)} fra ${regningsafsender} for ${leverandoer.ydelse}, som var bogført som skyldig før 1. oktober ${aar}.`;
         }
         const betaling = vaelgBetaling(beloeb, ["bankkonto", "kassekredit"]);
         if (!betaling) return null;
@@ -685,7 +763,8 @@ function byg(variant: Variant, forsoeg: number): Model | null {
         if (beloeb <= 0) return null;
         bank += beloeb;
         facit.push(linje(20004, "debet", beloeb), linje(20002, "kredit", beloeb));
-        tekst = (dato, aar) => `Den ${dato} ${beskrivelse(aar)} ${likviditetsformulering("lejerIndbetalerTidligere", 1)}`;
+        tekst = (dato, aar) =>
+          `Den ${dato} ${beskrivelse(aar)} ${likviditetsformulering("lejerIndbetalerTidligere", 1)} ${likviditetsformulering("indbetaltBank", 1)}`;
         break;
       }
       case "amortisering": {
@@ -738,7 +817,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     forloeb.push(resultat(netto));
   }
   const dagsvaerdiIndeks = plan.indexOf(dagsvaerdiPlan); // bilag nr. = indeks + 1
-  const ejendomFoer = ejendom + plan.slice(0, dagsvaerdiIndeks).reduce((s, pl) => s + (pl.type === "forbedring" ? pl.beloeb - fradrag(pl.beloeb) : 0), 0);
+  const ejendomFoer = ejendom + plan.slice(0, dagsvaerdiIndeks).reduce((s, pl) => s + (pl.type === "forbedring" ? pl.beloeb - fradrag(pl.beloeb, pl.anvendelse!) : 0), 0);
   const minReg = oprund(0.005 * ejendomFoer, 100 * KR);
   const maksReg = nedrund(0.03 * ejendomFoer, 100 * KR);
   const proev = (reg: number) => {
@@ -777,9 +856,10 @@ function byg(variant: Variant, forsoeg: number): Model | null {
       ? [linje(20001, "debet", regBeloeb), linje(8000, "kredit", regBeloeb)]
       : [linje(8000, "debet", regBeloeb), linje(20001, "kredit", regBeloeb)];
   const valuar = dagsvaerdiPlan.afsender;
-  const ord = regulering > 0 ? "opskrivning" : "nedskrivning";
+  // Reference.docx 8.4: "positiv dagsværdiregulering" og "negativ dagsværdiregulering".
+  const ord = regulering > 0 ? "positiv" : "negativ";
   dagsvaerdiModel.tekst = (dato) =>
-    `${valuar} har den ${dato} opgjort dagsværdien af investeringsejendommen. Dagsværdireguleringen for året er en ${ord} på ${kr(regBeloeb)} ${likviditetsformulering("ingenLikviditet", 1)}`;
+    `${valuar} har den ${dato} opgjort dagsværdien af investeringsejendommen. Der skal bogføres en ${ord} dagsværdiregulering på ${kr(regBeloeb)} ${likviditetsformulering("ingenLikviditet", 1)}`;
   startResultat.set(6005, (startResultat.get(6005) ?? 0) + udfald.justering);
 
   // Trin 8: saldi ved start; aktiekapital og overført resultat fastlægges til sidst (10.3).

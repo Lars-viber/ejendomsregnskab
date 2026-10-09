@@ -1,14 +1,18 @@
 /**
- * Fiktive afsendere og korte beskrivelser til bilagsteksterne (Reference.docx afsnit 8.3).
- * Nøglen er indholdsteksten fra kontoplanens kolonne "Indhold"; den indgår ordret i bilagsteksten.
- * Alle firmanavne er opdigtede.
+ * Fiktive afsendere til bilagsteksterne (Reference.docx afsnit 8.3). Afsenderen skal passe til ydelsen:
+ * et arkitektfirma projekterer, en entreprenør eller håndværker udfører. Alle firmanavne er opdigtede.
+ * Beskrivelserne af momsbelagte ydelser står i den godkendte klassifikationsliste (klassifikation.ts).
  */
 
 export interface Indholdstekst {
   /** Mulige fiktive afsendere. */
   afsendere: readonly string[];
-  /** Tekst efter indholdsteksten, f.eks. "i ejendommens opgange for 4. kvartal". */
-  beskrivelse: string;
+  /** Afsendere, når ydelsen vedrører boliger (momsfri ejendom eller boligdelen). */
+  afsendereBolig?: readonly string[];
+  /** Afsendere, når ydelsen vedrører erhverv (momspligtig ejendom eller erhvervsdelen). */
+  afsendereErhverv?: readonly string[];
+  /** Tekst efter indholdsteksten for ydelser uden moms, f.eks. "for 2. halvår". */
+  beskrivelse?: string;
   /** Måneder (10–12), hvor bilaget er plausibelt. Udeladt = hele kvartalet. */
   maaneder?: readonly number[];
 }
@@ -28,7 +32,6 @@ const KLOAK = ["Kloakservice Afløbsdal ApS", "Kloakmester Brøndum ApS"];
 const LAAS = ["Låsesmeden Nøglegaard ApS", "Låse- og Sikringsfirmaet Cylindra ApS"];
 const HVIDEVARER = ["Hvidevareservice Køleby ApS", "Teknikeren Vaskegaard ApS"];
 const KOEKKEN = ["Køkkenservice Bordplade ApS", "Snedkeriet Skabholm ApS"];
-const BAD = ["Badeværelsesservice Flisegaard ApS", "VVS-firmaet Rørholm & Søn ApS"];
 const AFFALD = ["Containerservice Affaldsby ApS", "Affaldshåndtering Ryddeholm ApS"];
 const SERVICE = ["Teknisk Ejendomsservice Driftholm ApS", "Serviceteknik Nordvang ApS"];
 const ELEVATOR = ["Elevatorservice Løftegaard ApS", "Elevatorfirmaet Op & Ned ApS"];
@@ -36,15 +39,11 @@ const FORSYNING = ["Forsyningsselskabet Strøm & Vand A/S", "Fjernvarmeværket V
 const TELE = ["Teleselskabet Signalby A/S", "Bredbåndsfirmaet Fiberholm A/S"];
 const REVISOR = ["Revisionsfirmaet Østergaard & Kjær", "Revisorhuset Balancegaard"];
 const ADVOKAT = ["Advokatfirmaet Krogh & Bang", "Advokathuset Paragrafholm"];
-const IT = ["Softwarehuset Ejendomsdata ApS", "IT-firmaet Lejersystem ApS"];
+const IT = ["Softwarehuset Ejendomsdata ApS", "IT-firmaet Driftsdata ApS"];
 const KONTOR = ["Kontorforsyningen Papirby ApS", "Kontorhuset Mappegaard ApS"];
 const INDKOEB = ["Byggemarkedet Værktøjsholm ApS", "Ejendomsudstyr Gårdmøbel ApS"];
-const ANNONCE = ["Boligportalen Lejebo ApS", "Annoncebureauet Ledigt Lejemål ApS"];
-const RAADGIVER = ["Ingeniørfirmaet Statikholm ApS", "Arkitektfirmaet Tegnestuen Linjegaard"];
-const UDLEJNING = ["Udlejningsbureauet Nøglen ApS", "Erhvervsmægler Lokalegaard ApS"];
 const VAGT = ["Vagtselskabet Natteravn ApS", "Alarmcentralen Sikkerby ApS"];
 const KOMMUNE = ["Kommunen"];
-const FORENING = ["Grundejerforeningen Kildevang", "Fællesforeningen Søholm Park"];
 
 export const INDHOLDSTEKSTER: Record<string, Indholdstekst> = {
   // 2000 Skatter og forsikring (uden moms)
@@ -54,75 +53,84 @@ export const INDHOLDSTEKSTER: Record<string, Indholdstekst> = {
   "Rottebekæmpelsesafgift": { afsendere: KOMMUNE, beskrivelse: "for indeværende år" },
   "Skorstensfejning, kommunal": { afsendere: KOMMUNE, beskrivelse: "af ejendommens skorstene" },
   // 2001 Foreningsbidrag (uden moms)
-  "Grundejerforeningsbidrag": { afsendere: FORENING.slice(0, 1), beskrivelse: "for 2. halvår" },
-  "Fællesforeningsbidrag": { afsendere: FORENING.slice(1), beskrivelse: "for 4. kvartal" },
+  "Grundejerforeningsbidrag": { afsendere: ["Grundejerforeningen Kildevang"], beskrivelse: "for 2. halvår" },
+  "Fællesforeningsbidrag": { afsendere: ["Fællesforeningen Søholm Park"], beskrivelse: "for 4. kvartal" },
   // 3000 Renholdelse
-  "Trappevask": { afsendere: RENGOERING, beskrivelse: "i ejendommens opgange for 4. kvartal" },
-  "Vinduespudsning": { afsendere: RENGOERING, beskrivelse: "af vinduerne i ejendommens opgange" },
-  "Rengøring af fællesarealer": { afsendere: RENGOERING, beskrivelse: "for 4. kvartal" },
+  "Trappevask": { afsendere: RENGOERING },
+  "Vinduespudsning": { afsendere: RENGOERING },
+  "Rengøring af fællesarealer": { afsendere: RENGOERING },
   // 3001 Ejendommens el, vand og varme
-  "Elektricitet til fællesarealer": { afsendere: FORSYNING.slice(0, 1), beskrivelse: "aconto for 4. kvartal" },
-  "Vand til fællesarealer - ejendommens andel": { afsendere: FORSYNING.slice(0, 1), beskrivelse: "aconto for 4. kvartal" },
-  "Varme til fællesarealer - ejendommens andel": { afsendere: FORSYNING.slice(1), beskrivelse: "aconto for 4. kvartal" },
+  "Elektricitet til fællesarealer": { afsendere: FORSYNING.slice(0, 1) },
+  "Vand til fællesarealer - ejendommens andel": { afsendere: FORSYNING.slice(0, 1) },
+  "Varme til fællesarealer - ejendommens andel": { afsendere: FORSYNING.slice(1) },
   // 3002 Kommunikation
-  "Internet": { afsendere: TELE, beskrivelse: "til ejendommens fælles netværk for 4. kvartal" },
-  "Telefon": { afsendere: TELE, beskrivelse: "til ejendommens servicetelefon for 4. kvartal" },
+  "Internet": { afsendere: TELE },
+  "Telefon": { afsendere: TELE },
   // 4000 Vedligeholdelse af grønne områder
-  "Ejendomsservice af grønne områder": { afsendere: GARTNER, beskrivelse: "i ejendommens gårdanlæg", maaneder: [10, 11] },
-  "Snerydning": { afsendere: GARTNER, beskrivelse: "på ejendommens stier og parkeringsplads", maaneder: [12] },
-  "Saltning": { afsendere: GARTNER, beskrivelse: "af ejendommens adgangsveje", maaneder: [11, 12] },
-  "Hækklipning": { afsendere: GARTNER, beskrivelse: "langs ejendommens skel", maaneder: [10] },
-  "Beplantning": { afsendere: GARTNER, beskrivelse: "med nye buske i gårdanlægget", maaneder: [10, 11] },
-  "Havearbejde": { afsendere: GARTNER, beskrivelse: "med efterårsoprydning i gårdanlægget", maaneder: [10, 11] },
-  "Vedligeholdelse af grønne områder": { afsendere: GARTNER, beskrivelse: "omkring ejendommen", maaneder: [10, 11] },
-  "Skadedyrsbekæmpelse": { afsendere: SKADEDYR, beskrivelse: "i ejendommens kælder" },
+  "Ejendomsservice af grønne områder": { afsendere: GARTNER, maaneder: [10, 11] },
+  "Snerydning": { afsendere: GARTNER, maaneder: [12] },
+  "Saltning": { afsendere: GARTNER, maaneder: [11, 12] },
+  "Hækklipning": { afsendere: GARTNER, maaneder: [10] },
+  "Beplantning": { afsendere: GARTNER, maaneder: [10, 11] },
+  "Havearbejde": { afsendere: GARTNER, maaneder: [10, 11] },
+  "Vedligeholdelse af grønne områder": { afsendere: GARTNER, maaneder: [10, 11] },
+  "Skadedyrsbekæmpelse": { afsendere: SKADEDYR },
   // 4001 Vedligeholdelse af bygning
-  "Rensning af tagrender": { afsendere: TAG, beskrivelse: "efter løvfald", maaneder: [10, 11] },
-  "Rensning af tag": { afsendere: TAG, beskrivelse: "for mos og alger" },
-  "Container- og affaldsservice": { afsendere: AFFALD, beskrivelse: "ved oprydning i ejendommens kælder" },
-  "Malerarbejde, vedligeholdelse": { afsendere: MALER, beskrivelse: "i ejendommens opgange" },
-  "Tømrerarbejde, vedligeholdelse": { afsendere: TOEMRER, beskrivelse: "på ejendommens kælderdøre" },
-  "Murerarbejde, vedligeholdelse": { afsendere: MURER, beskrivelse: "på ejendommens skorsten" },
-  "VVS-arbejde, vedligeholdelse": { afsendere: VVS, beskrivelse: "på ejendommens faldstammer" },
-  "Elektrikerarbejde, vedligeholdelse": { afsendere: ELEKTRIKER, beskrivelse: "på belysningen i opgangene" },
-  "Gulvarbejde, vedligeholdelse": { afsendere: GULV, beskrivelse: "i en af ejendommens lejligheder" },
-  "Tagreparationer, vedligeholdelse": { afsendere: TAG, beskrivelse: "efter en efterårsstorm" },
-  "Facadereparationer, vedligeholdelse": { afsendere: MURER, beskrivelse: "på ejendommens gavl" },
-  "Reparation af vinduer og døre": { afsendere: VINDUE, beskrivelse: "i ejendommens opgange" },
-  "Reparation af kloak og afløb": { afsendere: KLOAK, beskrivelse: "i ejendommens gård" },
-  "Låseservice": { afsendere: LAAS, beskrivelse: "med udskiftning af cylindre i hoveddørene" },
-  "Reparation af hårde hvidevarer": { afsendere: HVIDEVARER, beskrivelse: "i en af ejendommens lejligheder" },
-  "Reparation af køkkeninventar": { afsendere: KOEKKEN, beskrivelse: "i en af ejendommens lejligheder" },
-  "Reparation af badeværelser": { afsendere: BAD, beskrivelse: "i en af ejendommens lejligheder" },
+  "Rensning af tagrender": { afsendere: TAG, maaneder: [10, 11] },
+  "Rensning af tag": { afsendere: TAG },
+  "Container- og affaldsservice": { afsendere: AFFALD },
+  "Malerarbejde, vedligeholdelse": { afsendere: MALER },
+  "Tømrerarbejde, vedligeholdelse": { afsendere: TOEMRER },
+  "Murerarbejde, vedligeholdelse": { afsendere: MURER },
+  "VVS-arbejde, vedligeholdelse": { afsendere: VVS },
+  "Elektrikerarbejde, vedligeholdelse": { afsendere: ELEKTRIKER },
+  "Gulvarbejde, vedligeholdelse": { afsendere: GULV },
+  "Tagreparationer, vedligeholdelse": { afsendere: TAG },
+  "Facadereparationer, vedligeholdelse": { afsendere: MURER },
+  "Reparation af vinduer og døre": { afsendere: VINDUE },
+  "Reparation af kloak og afløb": { afsendere: KLOAK },
+  "Låseservice": { afsendere: LAAS },
+  "Reparation af hårde hvidevarer": { afsendere: HVIDEVARER },
+  "Reparation af køkkeninventar": { afsendere: KOEKKEN },
+  "Reparation af badeværelser": { afsendere: VVS },
   // 5000 Serviceomkostninger
-  "Elevatorservice": { afsendere: ELEVATOR, beskrivelse: "på ejendommens elevator for 4. kvartal" },
-  "Service på varmeanlæg": { afsendere: SERVICE, beskrivelse: "inden fyringssæsonen", maaneder: [10] },
-  "Service på ventilationsanlæg": { afsendere: SERVICE, beskrivelse: "med filterskift" },
-  "Service på brandanlæg": { afsendere: SERVICE, beskrivelse: "ved det årlige eftersyn" },
-  "Service på sprinkleranlæg": { afsendere: SERVICE, beskrivelse: "ved det årlige eftersyn" },
-  "Service på adgangskontrol": { afsendere: SERVICE, beskrivelse: "for 4. kvartal" },
-  "Service på porttelefon": { afsendere: SERVICE, beskrivelse: "for 4. kvartal" },
-  "Service på CTS/BMS-anlæg": { afsendere: SERVICE, beskrivelse: "for 4. kvartal" },
-  "Service på pumper": { afsendere: SERVICE, beskrivelse: "i ejendommens varmecentral" },
+  "Elevatorservice": { afsendere: ELEVATOR },
+  "Service på varmeanlæg": { afsendere: SERVICE, maaneder: [10] },
+  "Service på ventilationsanlæg": { afsendere: SERVICE },
+  "Service på brandanlæg": { afsendere: SERVICE },
+  "Service på sprinkleranlæg": { afsendere: SERVICE },
+  "Service på adgangskontrol": { afsendere: SERVICE },
+  "Service på porttelefon": { afsendere: SERVICE },
+  "Service på CTS/BMS-anlæg": { afsendere: SERVICE },
+  "Service på pumper": { afsendere: SERVICE },
   // 6000–6009 Administration
-  "Administratorhonorar": {
-    afsendere: ["Ejendomsadministrationen Forvalterhuset ApS", "Administrationsselskabet Lejegaarden ApS"],
-    beskrivelse: "for ejendomsadministration i 4. kvartal",
-  },
-  "Bogføring, revision og anden regnskabsmæssig assistance": { afsendere: REVISOR, beskrivelse: "i forbindelse med kvartalsregnskabet" },
-  "Honorar til advokat": { afsendere: ADVOKAT, beskrivelse: "for bistand i en lejesag" },
+  "Administratorhonorar": { afsendere: ["Ejendomsadministrationen Forvalterhuset ApS", "Administrationsselskabet Lejegaarden ApS"] },
+  "Bogføring, revision og anden regnskabsmæssig assistance": { afsendere: REVISOR },
+  "Honorar til advokat": { afsendere: ADVOKAT },
   "Overførselsgebyr, hævegebyr, netbankgebyr": { afsendere: ["Bøgely Bank A/S"], beskrivelse: "for 4. kvartal" },
-  "IT-system til ejendomsadministration": { afsendere: IT, beskrivelse: "med licens for 4. kvartal" },
-  "Lejeadministrationssystem": { afsendere: IT, beskrivelse: "med licens for 4. kvartal" },
-  "Papir, mapper, toner, kuglepenne": { afsendere: KONTOR, beskrivelse: "til ejendomskontoret" },
-  "Mindre nyanskaffelser": { afsendere: INDKOEB, beskrivelse: "i form af nye cykelstativer til gården" },
-  "Annoncering af ledige lejemål": { afsendere: ANNONCE, beskrivelse: "på boligportaler" },
-  "Udlejningshonorar": { afsendere: UDLEJNING, beskrivelse: "for genudlejning af en lejlighed" },
-  "Mæglerhonorar ved udlejning": { afsendere: UDLEJNING, beskrivelse: "af et erhvervslejemål" },
-  "Ingeniørhonorarer ved almindelig drift": { afsendere: RAADGIVER.slice(0, 1), beskrivelse: "for gennemgang af ejendommens tag" },
-  "Arkitekthonorarer ved almindelig drift": { afsendere: RAADGIVER.slice(1), beskrivelse: "for rådgivning om vedligeholdelse af facaden" },
-  "Sikkerheds- og vagttjeneste": { afsendere: VAGT, beskrivelse: "med rundering for 4. kvartal" },
-  "Alarmabonnement": { afsendere: VAGT, beskrivelse: "for 4. kvartal" },
+  "IT-system til ejendomsadministration": { afsendere: IT },
+  "Lejeadministrationssystem": { afsendere: IT },
+  "Papir, mapper, toner, kuglepenne": { afsendere: KONTOR },
+  "Mindre nyanskaffelser": { afsendere: INDKOEB },
+  "Annoncering af ledige lejemål": {
+    afsendere: ["Annoncebureauet Ledigt Lejemål ApS"],
+    afsendereBolig: ["Boligportalen Lejebo ApS"],
+    afsendereErhverv: ["Erhvervsportalen Lokaleguiden ApS"],
+  },
+  "Udlejningshonorar": {
+    afsendere: ["Udlejningsbureauet Nøglen ApS"],
+    afsendereBolig: ["Udlejningsbureauet Nøglen ApS"],
+    afsendereErhverv: ["Erhvervsmægler Lokalegaard ApS"],
+  },
+  "Mæglerhonorar ved udlejning": {
+    afsendere: ["Udlejningsmægleren Nøglegaard ApS"],
+    afsendereBolig: ["Udlejningsmægleren Nøglegaard ApS"],
+    afsendereErhverv: ["Erhvervsmægler Lokalegaard ApS"],
+  },
+  "Ingeniørhonorarer ved almindelig drift": { afsendere: ["Ingeniørfirmaet Statikholm ApS"] },
+  "Arkitekthonorarer ved almindelig drift": { afsendere: ["Arkitektfirmaet Tegnestuen Linjegaard"] },
+  "Sikkerheds- og vagttjeneste": { afsendere: VAGT },
+  "Alarmabonnement": { afsendere: VAGT },
 };
 
 /** Fiktive afsendere til de faste bilag. */
@@ -131,12 +139,70 @@ export const REALKREDITINSTITUTTER = ["Skovbo Realkredit A/S", "Kredithuset Nord
 export const BANKER = ["Bøgely Bank A/S"];
 export const VALUARER = ["Valuarfirmaet Bach & Mølgaard ApS", "Ejendomsvurdering Taksholm ApS"];
 
-/** Forbedringsprojekter: afsender og beskrivelse af arbejdet. */
-export const FORBEDRINGER: readonly { afsender: string; projekt: string }[] = [
-  { afsender: "Tømrerfirmaet Høvlstrup ApS", projekt: "etablering af nye altaner på gårdfacaden" },
-  { afsender: "Totalentreprenør Byggeholm A/S", projekt: "efterisolering og udnyttelse af tagetagen" },
-  { afsender: "Vinduesservice Karmholt ApS", projekt: "udskiftning af alle vinduer til energiruder" },
-  { afsender: "VVS-firmaet Rørholm & Søn ApS", projekt: "nye badeværelser i to lejligheder" },
-  { afsender: "El-installatør Strømsted ApS", projekt: "etablering af ladestandere på parkeringspladsen" },
-  { afsender: "Arkitektfirmaet Tegnestuen Linjegaard", projekt: "projektering og opførelse af nye kælderrum" },
+/**
+ * Forbedringsprojekter. Afsenderen udfører selv arbejdet (8.3). Beskrivelsen findes for de anvendelser,
+ * hvor projektet giver mening; ved delvis moms nævner den direkte, hvilken del projektet vedrører (9.2).
+ */
+export interface Forbedring {
+  afsender: string;
+  momsfri?: string;
+  momspligtig?: string;
+  bolig?: string;
+  erhverv?: string;
+  hele?: string;
+}
+
+export const FORBEDRINGER: readonly Forbedring[] = [
+  {
+    afsender: "Tømrerfirmaet Høvlstrup ApS",
+    momsfri: "etablering af nye altaner til ejendommens lejligheder",
+    bolig: "etablering af nye altaner til lejlighederne i boligdelen",
+  },
+  {
+    afsender: "VVS-firmaet Rørholm & Søn ApS",
+    momsfri: "nye badeværelser i to af ejendommens lejligheder",
+    bolig: "nye badeværelser i to af boligdelens lejligheder",
+  },
+  {
+    afsender: "Vinduesservice Karmholt ApS",
+    momsfri: "udskiftning af alle ejendommens vinduer til energiruder",
+    momspligtig: "udskiftning af alle kontorvinduer til energiruder",
+    bolig: "udskiftning af vinduerne i boligdelens lejligheder til energiruder",
+    erhverv: "udskiftning af vinduerne i erhvervslejemålene til energiruder",
+  },
+  {
+    afsender: "Totalentreprenør Byggeholm A/S",
+    momspligtig: "ombygning af et af ejendommens kontorlejemål til moderne kontorer",
+    erhverv: "ombygning af et erhvervslejemål til moderne kontorer",
+  },
+  {
+    afsender: "Tagdækkerfirmaet Tegltop ApS",
+    momsfri: "efterisolering og ny tagbelægning på hele ejendommen",
+    momspligtig: "efterisolering og ny tagbelægning på hele ejendommen",
+    hele: "efterisolering og ny tagbelægning på hele ejendommen",
+  },
+  {
+    afsender: "El-installatør Strømsted ApS",
+    momsfri: "etablering af ladestandere på ejendommens fælles parkeringsplads",
+    momspligtig: "etablering af ladestandere på ejendommens parkeringsplads",
+    hele: "etablering af ladestandere på ejendommens fælles parkeringsplads",
+  },
+];
+
+/**
+ * Leverandører af regninger fra før opgavens start (8.3: beløbet skal passe til leverandøren).
+ * Ydelsen nævner ikke beboelse, så teksten kan bruges ved alle momsstatusser.
+ */
+export const REGNINGER_FOER_START: readonly { afsendere: readonly string[]; ydelse: string; min: number; max: number }[] = [
+  { afsendere: VVS, ydelse: "VVS-arbejde", min: 4_000, max: 40_000 },
+  { afsendere: MALER, ydelse: "malerarbejde", min: 8_000, max: 60_000 },
+  { afsendere: TOEMRER, ydelse: "tømrerarbejde", min: 6_000, max: 50_000 },
+  { afsendere: ELEKTRIKER, ydelse: "elektrikerarbejde", min: 4_000, max: 35_000 },
+  { afsendere: TAG, ydelse: "tagarbejde", min: 10_000, max: 80_000 },
+  { afsendere: REVISOR, ydelse: "revision", min: 10_000, max: 45_000 },
+  { afsendere: ADVOKAT, ydelse: "juridisk bistand", min: 5_000, max: 35_000 },
+  { afsendere: RENGOERING, ydelse: "rengøring", min: 3_000, max: 15_000 },
+  { afsendere: GARTNER, ydelse: "pleje af ejendommens grønne områder", min: 3_000, max: 20_000 },
+  { afsendere: LAAS, ydelse: "låseservice", min: 2_000, max: 8_000 },
+  { afsendere: ["Totalentreprenør Byggeholm A/S"], ydelse: "byggearbejde", min: 50_000, max: 200_000 },
 ];

@@ -1,10 +1,10 @@
 /**
- * Skriver lokalt/klassifikation.html ud fra scripts/klassifikation.ts.
+ * Skriver lokalt/klassifikation.html ud fra den godkendte liste i src/domain/klassifikation.ts.
  * Køres med:  pnpm klassifikation
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { KONTOPLAN } from "../src/domain/kontoplan";
-import { KLASSIFIKATION, type Klassifikation } from "./klassifikation";
+import { KLASSIFIKATION, type Klassifikation } from "../src/domain/klassifikation";
 
 const esc = (tekst: string) => tekst.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const NAVN = new Map(KONTOPLAN.map((k) => [k.nummer, k.navn]));
@@ -38,14 +38,14 @@ function eksempler(k: Klassifikation): string {
 
 function raekke(k: Klassifikation, nr: number): string {
   return `
-  <tr class="${k.tvivl ? "tvivl" : ""}">
+  <tr>
     <td class="nr">${nr}</td>
-    <td><strong>${k.konto}</strong> ${esc(NAVN.get(k.konto) ?? "")}<div class="indhold">${esc(k.indhold)}</div>${k.tvivl ? `<div class="tvivlmaerke">Tvivl</div>` : ""}</td>
+    <td><strong>${k.konto}</strong> ${esc(NAVN.get(k.konto) ?? "")}<div class="indhold">${esc(k.indhold)}</div></td>
     <td>${statusser(k)}</td>
     <td class="del">${ja(k.bolig)}</td>
     <td class="del">${ja(k.erhverv)}</td>
     <td class="del">${ja(k.hele)}</td>
-    <td>${eksempler(k)}${k.tvivl ? `<p class="tvivltekst"><strong>Tvivl:</strong> ${esc(k.tvivl)}</p>` : ""}${k.note ? `<p class="note">${esc(k.note)}</p>` : ""}</td>
+    <td>${eksempler(k)}${k.note ? `<p class="note">${esc(k.note)}</p>` : ""}</td>
   </tr>`;
 }
 
@@ -53,11 +53,9 @@ it("danner lokalt/klassifikation.html", () => {
   // Listen skal dække præcis kontoplanens momsbelagte indholdslinjer.
   const iListen = KLASSIFIKATION.map((k) => `${k.konto}|${k.indhold}`).sort();
   expect(iListen).toEqual(momsbelagte.map((l) => `${l.konto}|${l.indhold}`).sort());
-  // Ved delvis moms skal hver omkostningslinje kunne vedrøre mindst én del, og ved hele ejendommen
-  // må den ikke samtidig kunne opdeles (Reference.docx 9.2 – markeres som tvivl, hvis det sker).
+  // Ved delvis moms skal hver linje kunne vedrøre mindst én del (Reference.docx 9.2).
   for (const k of KLASSIFIKATION) expect(Boolean(k.bolig || k.erhverv || k.hele)).toBe(true);
 
-  const antalTvivl = KLASSIFIKATION.filter((k) => k.tvivl).length;
   const taelle = (felt: "bolig" | "erhverv" | "hele") => KLASSIFIKATION.filter((k) => k[felt]).length;
   const html = `<!doctype html>
 <html lang="da">
@@ -87,9 +85,6 @@ it("danner lokalt/klassifikation.html", () => {
   dl { display: grid; grid-template-columns: 190px 1fr; gap: 2px 10px; margin: 0; }
   dt { color: var(--daempet); }
   dd { margin: 0; }
-  tr.tvivl td { background: var(--gul); }
-  .tvivlmaerke { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 4px; background: var(--gulkant); color: #4a3700; font-weight: 700; font-size: 12px; }
-  .tvivltekst { margin: 8px 0 0; padding: 6px 8px; border-left: 4px solid var(--gulkant); background: #fffbea; }
   .note { margin: 6px 0 0; color: var(--daempet); }
   table.formuleringer td, table.formuleringer th { border-bottom: 1px solid #e3ebf3; padding: 4px 8px; }
   @media print { body { background: #fff; padding: 0; } thead th { position: static; } tr { break-inside: avoid; } }
@@ -98,7 +93,7 @@ it("danner lokalt/klassifikation.html", () => {
 <body>
 <main>
   <h1>Klassifikationsliste for momsbelagte indholdslinjer</h1>
-  <p class="info">Forslag til projektejerens godkendelse efter Reference.docx version 1.3, afsnit 9.1 og 9.2. Dannet ${esc(
+  <p class="info">Godkendt af projektejeren 9. oktober 2026 (Reference.docx version 1.4, afsnit 8.2, 8.3, 9.1 og 9.2). Opgavegeneratoren bruger præcis disse beskrivelser. Dannet ${esc(
     new Date().toLocaleString("da-DK", { dateStyle: "long", timeStyle: "short" }),
   )}. Filen ligger kun på denne computer.</p>
 
@@ -108,8 +103,8 @@ it("danner lokalt/klassifikation.html", () => {
       <li>Listen indeholder alle ${KLASSIFIKATION.length} momsbelagte indholdslinjer i kontoplanen (kolonnen "Inklusive moms" = ja).</li>
       <li><strong>Må bruges ved</strong> viser de momsstatusser, hvor linjen kan indgå i et bilag. Reference.docx 8.2 tillader alle linjer ved alle momsstatusser; ved momspligtig ejendom må teksten dog aldrig nævne eller antyde beboelse (9.1).</li>
       <li><strong>Boligdel, Erhvervsdel og Hele ejendommen</strong> gælder kun delvis moms og viser, hvilke dele en faktura med linjen kan vedrøre (✓ = kan, – = kan ikke). Hele ejendommen bruges kun, når udgiften ikke naturligt kan opdeles (9.2).</li>
-      <li><strong>Eksempler</strong> viser, hvordan bilagsteksten vil beskrive ydelsen. Indholdsteksten fra kontoplanen indgår ordret (8.3).</li>
-      <li><span class="tvivlmaerke">Tvivl</span> Gule rækker er linjer, jeg er i tvivl om (${antalTvivl} i alt). Spørgsmålet står under eksemplerne.</li>
+      <li><strong>Beskrivelser</strong> er de tekster, bilagsteksten bruger om ydelsen. Indholdsteksten fra kontoplanen indgår ordret (8.3) – undtagen "Reparation af badeværelser" ved momspligtig ejendom og erhvervsdelen, som beskrives som "reparation af toilet- og omklædningsfaciliteter" (8.2).</li>
+      <li>Ved delvis moms nævner beskrivelsen altid direkte, hvilken del fakturaen vedrører, og derefter følger den tilsvarende formulering nedenfor (8.3).</li>
     </ul>
   </div>
 
@@ -124,7 +119,7 @@ it("danner lokalt/klassifikation.html", () => {
 
   <h2>Indholdslinjerne</h2>
   <table>
-    <thead><tr><th>#</th><th>Konto og indhold</th><th>Må bruges ved</th><th>Boligdel</th><th>Erhvervsdel</th><th>Hele ejendommen</th><th>Eksempler på bilagstekstens beskrivelse</th></tr></thead>
+    <thead><tr><th>#</th><th>Konto og indhold</th><th>Må bruges ved</th><th>Boligdel</th><th>Erhvervsdel</th><th>Hele ejendommen</th><th>Bilagstekstens beskrivelse af ydelsen</th></tr></thead>
     <tbody>${KLASSIFIKATION.map((k, i) => raekke(k, i + 1)).join("")}</tbody>
   </table>
 </main>

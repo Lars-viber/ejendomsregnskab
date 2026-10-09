@@ -1,12 +1,13 @@
 /**
  * Uafhængig regelkontrol af en opgave, skrevet direkte ud fra Reference.docx afsnit 8, 9 og 10
- * (version 1.2) og projektejerens godkendte rettelser. Kontrollen kender intet til, hvordan
+ * (version 1.4), den godkendte klassifikationsliste og projektejerens godkendte rettelser. Kontrollen kender intet til, hvordan
  * opgavegeneratoren arbejder; den ser kun på den færdige opgave.
  *
  * Returnerer en liste med brud på reglerne. En tom liste betyder, at opgaven er gyldig.
  */
 import { bankdageIMaaned, erBankdag, sidsteBankdagIDecember } from "../domain/bankdage";
 import { formaterBeloeb } from "../domain/beloeb";
+import { KLASSIFIKATION, TOILET_OG_OMKLAEDNING, type Del } from "../domain/klassifikation";
 import { KONTOPLAN } from "../domain/kontoplan";
 import {
   ANTAL_BILAG,
@@ -41,7 +42,33 @@ const ALLE_LIKVIDITETSTEKSTER = Object.values(LIKVIDITET).flatMap((l) => [l.enta
 
 const MOMS_FRI = "Der kan ikke afløftes moms, da ejendommen er momsfri.";
 const MOMS_FULD = "Der kan afløftes fuld moms, da ejendommen er fuldt momsregistreret.";
-const MOMS_DELVIS = /Der kan afløftes delvis moms, da ejendommen er delvis momsregistreret \(momsfradragsprocenten er (\d+) %\)\./g;
+// Delvis moms (8.3): fakturaen vedrører boligdelen, erhvervsdelen eller hele ejendommen.
+const MOMS_BOLIG = "Fakturaen vedrører ejendommens boliglejemål, som er momsfritaget. Der kan ikke afløftes moms.";
+const MOMS_ERHVERV = "Fakturaen vedrører ejendommens momsregistrerede erhvervslejemål. Der kan afløftes fuld moms.";
+const MOMS_HELE = /Fakturaen vedrører hele ejendommen\. Der kan afløftes delvis moms med momsfradragsprocenten \((\d+) %\)\./g;
+
+// Ord, der nævner delen direkte i beskrivelsen af ydelsen (8.3 og 9.2).
+const BOLIGORD = /bolig|lejlighed/i;
+const ERHVERVSORD = /erhverv|kontor|butik/i;
+const HELEORD = /ejendomme|fælles/i;
+// Ord, der nævner eller antyder beboelse; må aldrig stå ved momspligtig ejendom (9.1).
+const BEBOELSESORD = /bolig|lejlighed|beboe|badeværelse|vaskeri|altan/i;
+
+const DELENS_NAVN: Record<Del, string> = { bolig: "boligdelen", erhverv: "erhvervsdelen", hele: "hele ejendommen" };
+
+/** Hvilken del en faktura ved delvis moms vedrører, læst ud fra formuleringen i teksten. */
+function delIFormulering(tekst: string): Del[] {
+  const dele: Del[] = [];
+  if (tekst.includes(MOMS_BOLIG)) dele.push("bolig");
+  if (tekst.includes(MOMS_ERHVERV)) dele.push("erhverv");
+  if ([...tekst.matchAll(MOMS_HELE)].length > 0) dele.push("hele");
+  return dele;
+}
+
+/** Beskrivelsen af ydelsen: teksten mellem datoen og "Fakturaen lyder på". */
+function beskrivelseAfYdelse(tekst: string): string {
+  return /den \d{1,2}\. \S+ \d{4} (.*?)\. Fakturaen lyder på/.exec(tekst)?.[1] ?? "";
+}
 const MOMS_UDEN = "Der kan ikke afløftes moms, da beløbet er faktureret uden moms.";
 const MOMS_UDEN_FLERTAL = "Der kan ikke afløftes moms, da beløbene er faktureret uden moms.";
 
@@ -158,7 +185,10 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
         brud(`3.1: Bilag ${b.nummer} henviser til indhold, der ikke findes på konto ${ref.konto}: "${ref.indhold}".`);
         continue;
       }
-      if (b.type === "omkostning" && !b.tekst.toLowerCase().includes(ref.indhold.toLowerCase())) {
+      const ordret = b.tekst.toLowerCase().includes(ref.indhold.toLowerCase());
+      // 8.2: "Reparation af badeværelser" beskrives uden for boliger som toilet- og omklædningsfaciliteter.
+      const alias = ref.indhold === "Reparation af badeværelser" && b.tekst.includes(TOILET_OG_OMKLAEDNING);
+      if (["omkostning", "administrator", "vedligeholdelse"].includes(b.type) && !ordret && !alias) {
         brud(`8.3: Indholdsteksten "${ref.indhold}" står ikke i bilag ${b.nummer}.`);
       }
       if (OMKOSTNINGSBILAG.includes(b.type) && konto?.kategori === "Omkostning") {
@@ -207,26 +237,73 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
       if (fundne.length !== 2 || !betaling.every((f) => f === LIKVIDITET.bankkonto.ental || f === LIKVIDITET.kassekredit.ental)) {
         brud(`8.3: Bilag ${b.nummer} angiver ikke, hvordan den tidligere skyldige regning betales.`);
       }
+    } else if (b.type === "lejerIndbetaler") {
+      // Kontoen, der indbetales på, skal fremgå (8.3).
+      if (fundne.length !== 2 || !t.includes(LIKVIDITET.indbetaltBank.ental)) {
+        brud(`8.3: Bilag ${b.nummer} oplyser ikke, hvilken konto lejen indbetales på.`);
+      }
     } else if (fundne.length !== 1) {
       brud(`8.3: Bilag ${b.nummer} har ${fundne.length} likviditetsformuleringer, ikke én.`);
     }
 
     // Momsformulering for omkostningsbilag.
-    const delvis = [...t.matchAll(MOMS_DELVIS)].map((m) => Number(m[1]));
-    const momsTekster = [t.includes(MOMS_FRI), t.includes(MOMS_FULD), delvis.length > 0, t.includes(MOMS_UDEN) || t.includes(MOMS_UDEN_FLERTAL)].filter(Boolean).length;
+    const heleProcent = [...t.matchAll(MOMS_HELE)].map((m) => Number(m[1]));
+    const dele = delIFormulering(t);
+    const momsTekster =
+      [t.includes(MOMS_FRI), t.includes(MOMS_FULD), t.includes(MOMS_UDEN) || t.includes(MOMS_UDEN_FLERTAL)].filter(Boolean).length + dele.length;
     if (OMKOSTNINGSBILAG.includes(b.type)) {
       if (momsTekster !== 1) brud(`8.3: Bilag ${b.nummer} har ${momsTekster} momsformuleringer, ikke én.`);
       const inkl = t.includes("inklusive moms");
       if (inkl) {
         if (status === "momsfri" && !t.includes(MOMS_FRI)) brud(`8.3: Bilag ${b.nummer} har forkert momsformulering for momsfri ejendom.`);
         if (status === "momspligtig" && !t.includes(MOMS_FULD)) brud(`8.3: Bilag ${b.nummer} har forkert momsformulering for momspligtig ejendom.`);
-        if (status === "delvis" && (delvis.length !== 1 || delvis[0] !== p)) brud(`8.3: Bilag ${b.nummer} har forkert momsfradragsprocent.`);
+        if (status === "delvis") {
+          // (b) Præcis én af de tre formuleringer, og beskrivelsen nævner delen direkte.
+          if (dele.length !== 1) brud(`8.3: Bilag ${b.nummer} har ikke præcis én af de tre formuleringer for delvis moms.`);
+          else {
+            const del = dele[0];
+            if (del === "hele" && heleProcent[0] !== p) brud(`8.3: Bilag ${b.nummer} har forkert momsfradragsprocent.`);
+            const ydelse = beskrivelseAfYdelse(t);
+            const nævnt =
+              del === "bolig"
+                ? BOLIGORD.test(ydelse) && !ERHVERVSORD.test(ydelse)
+                : del === "erhverv"
+                  ? ERHVERVSORD.test(ydelse) && !BOLIGORD.test(ydelse) && !/badeværelse/i.test(ydelse)
+                  : HELEORD.test(ydelse) && !BOLIGORD.test(ydelse) && !ERHVERVSORD.test(ydelse);
+            if (!nævnt) brud(`8.3: Beskrivelsen i bilag ${b.nummer} nævner ikke direkte, at fakturaen vedrører ${DELENS_NAVN[del]}.`);
+            // 9.2: delen skal være tilladt for indholdslinjen i den godkendte klassifikationsliste.
+            const ref = b.indhold[0];
+            const k = KLASSIFIKATION.find((x) => x.konto === ref?.konto && x.indhold === ref?.indhold);
+            if (b.type !== "forbedring" && (!k || k[del] === null || !t.includes(k[del]!))) {
+              brud(`9.2: Bilag ${b.nummer} følger ikke klassifikationslisten for "${ref?.indhold}" (${del}).`);
+            }
+          }
+        } else if (b.type !== "forbedring") {
+          const ref = b.indhold[0];
+          const k = KLASSIFIKATION.find((x) => x.konto === ref?.konto && x.indhold === ref?.indhold);
+          if (!k || k[status] === null || !t.includes(k[status]!)) {
+            brud(`9.1: Bilag ${b.nummer} følger ikke klassifikationslisten for "${ref?.indhold}" (${status}).`);
+          }
+        }
       } else {
         const uden = flere ? MOMS_UDEN_FLERTAL : MOMS_UDEN;
         if (!t.includes(uden)) brud(`8.3: Bilag ${b.nummer} mangler "${uden}".`);
       }
     } else if (momsTekster > 0) {
       brud(`8.3: Bilag ${b.nummer} er ikke et omkostningsbilag, men har en momsformulering.`);
+    }
+
+    // (a) 9.1: ren erhvervsejendom – ingen beboelse; ren boligejendom – intet erhverv.
+    if (status === "momspligtig" && BEBOELSESORD.test(t)) brud(`9.1: Bilag ${b.nummer} nævner eller antyder beboelse ved momspligtig ejendom.`);
+    if (status === "momsfri" && /erhverv/i.test(t)) brud(`9.1: Bilag ${b.nummer} nævner erhverv ved momsfri ejendom (ren boligejendom).`);
+    // (c) 8.4: periodiseringsbilag oplyser 30 dage pr. måned og 360 dage pr. år.
+    if (b.type === "forsikring" && !t.includes("Der regnes med 30 dage pr. måned og 360 dage pr. år.")) {
+      brud(`8.4: Periodiseringsbilag ${b.nummer} oplyser ikke 30 dage pr. måned og 360 dage pr. år.`);
+    }
+    // (d) 8.4: betegnelserne positiv/negativ dagsværdiregulering – aldrig opskrivning/nedskrivning.
+    if (/opskrivning|nedskrivning/i.test(t)) brud(`8.4: Bilag ${b.nummer} bruger "opskrivning" eller "nedskrivning".`);
+    if (b.type === "dagsvaerdi" && !/(positiv|negativ) dagsværdiregulering/.test(t)) {
+      brud(`8.4: Bilag ${b.nummer} bruger ikke betegnelsen positiv eller negativ dagsværdiregulering.`);
     }
 
     // Momsbeløbet må aldrig stå i teksten.
@@ -298,7 +375,7 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
     if (brutto !== null) {
       if (brutto % (5 * KR) !== 0) brud(`9.3: Momsen i bilag ${b.nummer} giver ikke hele kroner.`);
       // Den fradragsberettigede del gælder købsmoms på omkostninger, ikke salgsmoms på husleje.
-      else if (b.type !== "leje" && status === "delvis" && p !== null && ((brutto / 5) * p) % (100 * KR) !== 0) {
+      else if (b.type !== "leje" && status === "delvis" && delIFormulering(b.tekst)[0] === "hele" && p !== null && ((brutto / 5) * p) % (100 * KR) !== 0) {
         brud(`9.3: Den fradragsberettigede moms i bilag ${b.nummer} giver ikke hele kroner.`);
       }
     }
@@ -385,7 +462,9 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
         if (!moms) brud("10.3: Forbedringen er under 100.000 kr. ved momsfri ejendom.");
         else {
           // 9.4 har forrang: en forbedring på 100.000 kr. må ikke have kunnet overholde reglen.
-          const fradrag = (x: number) => (status === "momspligtig" ? x / 5 : ((x / 5) * (p ?? 0)) / 100);
+          const del = delIFormulering(b.tekst)[0];
+          const andel = status === "momspligtig" || del === "erhverv" ? 1 : del === "hele" ? (p ?? 0) / 100 : 0;
+          const fradrag = (x: number) => (x / 5) * andel;
           const plads = Math.min(...tilstande.slice(i + 1, 19).map((t) => -g(t, 30005) - g(t, 30006)));
           if (plads + fradrag(brutto) - fradrag(100_000 * KR) > 0) brud("9.4/10.3: Forbedringen er gjort mindre end 100.000 kr. uden grund.");
         }
@@ -422,6 +501,15 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
   const vedligeholdIalt = g(slut, 4000) + g(slut, 4001) + g(slut, 5000);
   if (vedligeholdIalt < 0.1 * lejeIalt || vedligeholdIalt > 0.12 * lejeIalt) brud("10.2: 4000 + 4001 + 5000 er ikke 10–12 % af lejeindtægterne.");
   if (g(slut, 7000) < 0.3 * lejeIalt || g(slut, 7000) > 0.4 * lejeIalt) brud("10.2: 7000 er ikke 30–40 % af lejeindtægterne.");
+  // (g) 10.2: årets resultat før skat udgør mindst 5 % af lejeindtægterne ekskl. moms.
+  if (resultat < 0.05 * lejeIalt) brud("10.2: Årets resultat før skat er under 5 % af lejeindtægterne.");
+  // (b) 9.2: ved delvis moms mindst ét momsbelagt bilag af hver af de tre typer.
+  if (status === "delvis") {
+    const fundneDele = new Set(bilagsliste.flatMap((b) => (b.tekst.includes("inklusive moms") && b.type !== "leje" ? delIFormulering(b.tekst) : [])));
+    for (const del of ["bolig", "erhverv", "hele"] as const) {
+      if (!fundneDele.has(del)) brud(`9.2: Opgaven har intet bilag, der vedrører ${DELENS_NAVN[del]}.`);
+    }
+  }
 
   // ---------- 10.3 Beløbsrammer ----------
   if (lejeIalt < 0.05 * g(slut, 20000) || lejeIalt > 0.08 * g(slut, 20000)) brud("10.3: Lejeindtægterne er ikke 5–8 % af 20000.");
