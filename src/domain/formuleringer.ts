@@ -20,15 +20,15 @@ const LIKVIDITET_ENTAL: Record<Likviditet, string> = {
   indbetaltBank: "Beløbet er indbetalt på bankkonto.",
   skyldig: "Beløbet er skyldigt.",
   tidligereSkyldigBetales: "En tidligere skyldig regning betales.",
-  opkraevetIkkeIndbetalt: "Beløbet er opkrævet, men endnu ikke indbetalt af lejer.",
-  lejerIndbetalerTidligere: "Lejer indbetaler tidligere opkrævet leje.",
+  opkraevetIkkeIndbetalt: "Beløbet er opkrævet, men endnu ikke indbetalt af lejerne.",
+  lejerIndbetalerTidligere: "Lejerne indbetaler tidligere opkrævet leje.",
   ingenLikviditet: "Bilaget har ingen likviditetseffekt.",
 };
 
 const LIKVIDITET_FLERTAL: Partial<Record<Likviditet, string>> = {
   indbetaltBank: "Beløbene er indbetalt på bankkonto.",
   skyldig: "Beløbene er skyldige.",
-  opkraevetIkkeIndbetalt: "Beløbene er opkrævet, men endnu ikke indbetalt af lejer.",
+  opkraevetIkkeIndbetalt: "Beløbene er opkrævet, men endnu ikke indbetalt af lejerne.",
 };
 
 /** Likviditetsformuleringen; `antalBeloeb` er antallet af beløb, bilagsteksten nævner. */

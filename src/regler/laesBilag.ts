@@ -48,7 +48,7 @@ function likviditetskonto(tekst: string): { konto: number; ind: boolean } | null
   if (tekst.includes("Bilaget er betalt via bankkonto.")) return { konto: 20004, ind: false };
   if (/Beløbe(t|ne) er skyldig(t|e)\./.test(tekst)) return { konto: 30004, ind: false };
   if (/Beløbe(t|ne) er indbetalt på bankkonto\./.test(tekst)) return { konto: 20004, ind: true };
-  if (/Beløbe(t|ne) er opkrævet, men endnu ikke indbetalt af lejer\./.test(tekst)) return { konto: 20002, ind: true };
+  if (/Beløbe(t|ne) er opkrævet, men endnu ikke indbetalt af lejerne\./.test(tekst)) return { konto: 20002, ind: true };
   return null;
 }
 
@@ -114,7 +114,7 @@ function omkostning(b: Bogfoering, tekst: string, konto: number, beloeb: number)
 export function laesBilag(tekst: string, saldiFoer: ReadonlyMap<number, number>): Bogfoering {
   const b: Bogfoering = new Map();
 
-  if (tekst.includes("Lejer indbetaler tidligere opkrævet leje.")) {
+  if (tekst.includes("Lejerne indbetaler tidligere opkrævet leje.")) {
     const x = eneste(tekst);
     post(b, 20004, x); // alle indbetalinger går til bankkontoen (8.3)
     post(b, 20002, -x);

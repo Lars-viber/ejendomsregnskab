@@ -58,7 +58,7 @@ describe("læsning af bilagstekster", () => {
 
   it("husleje ved delvis moms med flertal (8.2 og 8.3)", () => {
     const tekst =
-      "Ejendomsselskabet Ejendommen A/S opkræver den 1. oktober 2026 husleje for 4. kvartal (oktober–december) hos ejendommens lejere. Lejeindtægter (momspligtig) udgør 125.000,00 kr. inklusive moms, og lejeindtægter (ikke momspligtig) udgør 80.000,00 kr. Beløbene er opkrævet, men endnu ikke indbetalt af lejer.";
+      "Ejendomsselskabet Ejendommen A/S opkræver den 1. oktober 2026 husleje for 4. kvartal (oktober–december) hos ejendommens lejere. Lejeindtægter (momspligtig) udgør 125.000,00 kr. inklusive moms, og lejeindtægter (ikke momspligtig) udgør 80.000,00 kr. Beløbene er opkrævet, men endnu ikke indbetalt af lejerne.";
     expect(bogfoering(tekst)).toEqual({ 20002: 205_000, 1000: -100_000, 30005: -25_000, 1001: -80_000 });
   });
 
@@ -106,7 +106,7 @@ describe("læsning af bilagstekster", () => {
       bogfoering("Den 2. december 2026 betales regningen på 5.000,00 kr. fra VVS ApS, som er bogført som skyldig i bilag 4. En tidligere skyldig regning betales. Bilaget er betalt via kassekredit."),
     ).toEqual({ 30004: 5_000, 30003: -5_000 });
     expect(
-      bogfoering("Den 2. november 2026 indbetaler lejerne 205.000,00 kr. af huslejen, der blev opkrævet i bilag 1. Lejer indbetaler tidligere opkrævet leje. Beløbet er indbetalt på bankkonto."),
+      bogfoering("Den 2. november 2026 indbetaler lejerne 205.000,00 kr. af huslejen, der blev opkrævet i bilag 1. Lejerne indbetaler tidligere opkrævet leje. Beløbet er indbetalt på bankkonto."),
     ).toEqual({ 20004: 205_000, 20002: -205_000 });
   });
 

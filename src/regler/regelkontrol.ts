@@ -32,10 +32,10 @@ const LIKVIDITET: Record<string, { ental: string; flertal?: string }> = {
   skyldig: { ental: "Beløbet er skyldigt.", flertal: "Beløbene er skyldige." },
   tidligereSkyldigBetales: { ental: "En tidligere skyldig regning betales." },
   opkraevetIkkeIndbetalt: {
-    ental: "Beløbet er opkrævet, men endnu ikke indbetalt af lejer.",
-    flertal: "Beløbene er opkrævet, men endnu ikke indbetalt af lejer.",
+    ental: "Beløbet er opkrævet, men endnu ikke indbetalt af lejerne.",
+    flertal: "Beløbene er opkrævet, men endnu ikke indbetalt af lejerne.",
   },
-  lejerIndbetalerTidligere: { ental: "Lejer indbetaler tidligere opkrævet leje." },
+  lejerIndbetalerTidligere: { ental: "Lejerne indbetaler tidligere opkrævet leje." },
   ingenLikviditet: { ental: "Bilaget har ingen likviditetseffekt." },
 };
 const ALLE_LIKVIDITETSTEKSTER = Object.values(LIKVIDITET).flatMap((l) => [l.ental, ...(l.flertal ? [l.flertal] : [])]);
@@ -300,6 +300,8 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
     if (b.type === "forsikring" && !t.includes("Der regnes med 30 dage pr. måned og 360 dage pr. år.")) {
       brud(`8.4: Periodiseringsbilag ${b.nummer} oplyser ikke 30 dage pr. måned og 360 dage pr. år.`);
     }
+    // 8.3 (version 1.5): lejerne omtales i flertal.
+    if (/\b[Ll]ejer indbetaler\b|indbetalt af lejer\.|\ben lejer\b/.test(t)) brud(`8.3: Bilag ${b.nummer} omtaler lejerne i ental.`);
     // (d) 8.4: betegnelserne positiv/negativ dagsværdiregulering – aldrig opskrivning/nedskrivning.
     if (/opskrivning|nedskrivning/i.test(t)) brud(`8.4: Bilag ${b.nummer} bruger "opskrivning" eller "nedskrivning".`);
     if (b.type === "dagsvaerdi" && !/(positiv|negativ) dagsværdiregulering/.test(t)) {

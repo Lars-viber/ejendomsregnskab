@@ -9,8 +9,8 @@ describe("likviditetsformuleringer (8.3)", () => {
       indbetaltBank: "Beløbet er indbetalt på bankkonto.",
       skyldig: "Beløbet er skyldigt.",
       tidligereSkyldigBetales: "En tidligere skyldig regning betales.",
-      opkraevetIkkeIndbetalt: "Beløbet er opkrævet, men endnu ikke indbetalt af lejer.",
-      lejerIndbetalerTidligere: "Lejer indbetaler tidligere opkrævet leje.",
+      opkraevetIkkeIndbetalt: "Beløbet er opkrævet, men endnu ikke indbetalt af lejerne.",
+      lejerIndbetalerTidligere: "Lejerne indbetaler tidligere opkrævet leje.",
       ingenLikviditet: "Bilaget har ingen likviditetseffekt.",
     };
     for (const [likviditet, tekst] of Object.entries(forventet)) {
@@ -22,7 +22,7 @@ describe("likviditetsformuleringer (8.3)", () => {
     expect(likviditetsformulering("indbetaltBank", 2)).toBe("Beløbene er indbetalt på bankkonto.");
     expect(likviditetsformulering("skyldig", 3)).toBe("Beløbene er skyldige.");
     expect(likviditetsformulering("opkraevetIkkeIndbetalt", 2)).toBe(
-      "Beløbene er opkrævet, men endnu ikke indbetalt af lejer.",
+      "Beløbene er opkrævet, men endnu ikke indbetalt af lejerne.",
     );
   });
 

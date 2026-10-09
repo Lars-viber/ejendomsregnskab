@@ -758,7 +758,7 @@ function byg(variant: Variant, forsoeg: number): Model | null {
         } else {
           beloeb = medOere(foerStartTilgodehavende * iv(0.5, 1));
           foerStartTilgodehavende -= beloeb;
-          beskrivelse = (aar) => `indbetaler en lejer ${kr(beloeb)} i husleje, der blev opkrævet før 1. oktober ${aar}.`;
+          beskrivelse = (aar) => `indbetaler lejerne ${kr(beloeb)} i husleje, der blev opkrævet før 1. oktober ${aar}.`;
         }
         if (beloeb <= 0) return null;
         bank += beloeb;

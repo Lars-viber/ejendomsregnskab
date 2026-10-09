@@ -177,6 +177,13 @@ describe("regelkontrollen", () => {
     expect(fejlI(o)).toMatch(/oplyser ikke, hvilken konto lejen indbetales på/);
   });
 
+  it("opdager lejerne omtalt i ental (8.3, version 1.5)", () => {
+    const o = medBilagstype("lejerIndbetaler");
+    const bilag = o.bilag.find((b) => b.type === "lejerIndbetaler")!;
+    bilag.tekst = bilag.tekst.replace("indbetaler lejerne", "indbetaler en lejer");
+    expect(fejlI(o)).toMatch(/omtaler lejerne i ental/);
+  });
+
   it("(e) opdager en tidligere skyldig regning uden oplysning om kontoen (8.3)", () => {
     const o = medBilagstype("tidligereSkyldig");
     const bilag = o.bilag.find((b) => b.type === "tidligereSkyldig")!;
