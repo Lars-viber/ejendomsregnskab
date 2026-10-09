@@ -5,6 +5,17 @@ import type { Postering, Saldo, Side } from "../domain/opgave";
 
 const SIDENAVN: Record<Side, string> = { debet: "Debet", kredit: "Kredit" };
 
+/** Grøn/rød efter [Kontroller] (7.1) eller fremhævet ved visning af et tidligere bilag (7.2). */
+export type PosteringsMarkering = "korrekt" | "forkert" | "fremhaevet";
+
+const MARKERINGSTEKST: Record<PosteringsMarkering, string> = {
+  korrekt: "korrekt",
+  forkert: "forkert",
+  fremhaevet: "fra det viste bilag",
+};
+
+const markeringsklasse = (m?: PosteringsMarkering) => (m ? ` markering-${m}` : "");
+
 export interface TKontoHandlinger {
   /** Returnerer en fejltekst, hvis beløbet ikke kan bruges. */
   onTilfoej: (konto: number, side: Side, udtryk: string) => string | null;
@@ -19,10 +30,17 @@ interface TKontoProps extends TKontoHandlinger {
   aktivtBilag: number;
   /** Om der kan bogføres på det aktive bilag. */
   kanBogfoere: boolean;
+  /** Markering pr. postering (postering.id). */
+  markeringer?: Readonly<Record<string, PosteringsMarkering>>;
 }
 
 /** En postering på det aktive bilag: vises formateret, redigeres ved klik (som i reference-applikationen). */
-function RedigerbarPostering({ postering, onRet, onSlet }: { postering: Postering } & Pick<TKontoHandlinger, "onRet" | "onSlet">) {
+function RedigerbarPostering({
+  postering,
+  markering,
+  onRet,
+  onSlet,
+}: { postering: Postering; markering?: PosteringsMarkering } & Pick<TKontoHandlinger, "onRet" | "onSlet">) {
   const [udtryk, setUdtryk] = useState(postering.udtryk);
   const [fejl, setFejl] = useState<string | null>(null);
   const [harFokus, setHarFokus] = useState(false);
@@ -39,11 +57,11 @@ function RedigerbarPostering({ postering, onRet, onSlet }: { postering: Posterin
 
   return (
     <div className="postering-wrap">
-      <div className="postering er-aktiv">
+      <div className={`postering er-aktiv${markeringsklasse(markering)}`} data-markering={markering}>
         <span className="bilagsmaerke">B{postering.bilag}</span>
         <input
           value={harFokus || fejl ? udtryk : formaterBeloeb(postering.oere)}
-          aria-label={`Ret beløb: ${beskrivelse}`}
+          aria-label={`Ret beløb: ${beskrivelse}${markering ? ` (${MARKERINGSTEKST[markering]})` : ""}`}
           aria-invalid={fejl !== null}
           inputMode="decimal"
           onChange={(event) => setUdtryk(event.target.value)}
@@ -119,7 +137,7 @@ function NyPostering({ konto, side, onTilfoej }: { konto: Konto; side: Side } & 
   );
 }
 
-export function TKonto({ konto, saldo, posteringer, aktivtBilag, kanBogfoere, onTilfoej, onRet, onSlet }: TKontoProps) {
+export function TKonto({ konto, saldo, posteringer, aktivtBilag, kanBogfoere, markeringer = {}, onTilfoej, onRet, onSlet }: TKontoProps) {
   return (
     <article className="tkonto" aria-label={`${konto.nummer} ${konto.navn}`}>
       {/* Kontonavnet står i direkte forlængelse af kontonummeret og ombrydes ved behov. */}
@@ -144,9 +162,22 @@ export function TKonto({ konto, saldo, posteringer, aktivtBilag, kanBogfoere, on
               .sort((a, b) => a.bilag - b.bilag)
               .map((postering) =>
                 postering.bilag === aktivtBilag && kanBogfoere ? (
-                  <RedigerbarPostering key={postering.id} postering={postering} onRet={onRet} onSlet={onSlet} />
+                  <RedigerbarPostering
+                    key={postering.id}
+                    postering={postering}
+                    markering={markeringer[postering.id]}
+                    onRet={onRet}
+                    onSlet={onSlet}
+                  />
                 ) : (
-                  <div key={postering.id} className="postering er-laast">
+                  <div
+                    key={postering.id}
+                    className={`postering er-laast${markeringsklasse(markeringer[postering.id])}`}
+                    data-markering={markeringer[postering.id]}
+                    aria-label={`${SIDENAVN[postering.side]} ${formaterBeloeb(postering.oere)} fra bilag ${postering.bilag}${
+                      markeringer[postering.id] ? ` (${MARKERINGSTEKST[markeringer[postering.id]]})` : ""
+                    }`}
+                  >
                     <span className="bilagsmaerke">B{postering.bilag}</span>
                     <span className="beloeb">{formaterBeloeb(postering.oere)}</span>
                   </div>

@@ -1,15 +1,24 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import App from "../src/App";
 import { Bogfoeringsbillede } from "../src/components/Bogfoeringsbillede";
 import { formaterBeloeb } from "../src/domain/beloeb";
 import type { Momsstatus } from "../src/domain/momsstatus";
 import { danVariant } from "../src/domain/variant";
+import type { Opgave } from "../src/domain/opgave";
 import { danOpgave } from "../src/generator/generator";
+import { nySession } from "../src/session/session";
+
+/** Bogføringsbilledet med sin egen session (i appen ligger sessionen i App). */
+function Vaert({ opgave, onTilForside }: { opgave: Opgave; onTilForside: () => void }) {
+  const [session, setSession] = useState(() => nySession(opgave.variant, opgave.aar));
+  return <Bogfoeringsbillede opgave={opgave} session={session} onSessionChange={setSession} onTilForside={onTilForside} />;
+}
 
 function visOpgave(momsstatus: Momsstatus = "delvis", onTilForside = () => {}) {
   const opgave = danOpgave(danVariant(momsstatus, 483915), 2026);
-  render(<Bogfoeringsbillede opgave={opgave} onTilForside={onTilForside} />);
+  render(<Vaert opgave={opgave} onTilForside={onTilForside} />);
   return opgave;
 }
 
@@ -51,11 +60,11 @@ describe("Boks 1 (6.2)", () => {
     expect(screen.getByRole("button", { name: "Næste bilag" })).toBeDisabled();
   });
 
-  it("viser en besked om, at [Kontroller] kommer i fase 4", async () => {
+  it("viser en hjælpetekst, når der trykkes [Kontroller] uden bogføring", async () => {
     const bruger = userEvent.setup();
     visOpgave();
     await bruger.click(screen.getByRole("button", { name: "Kontroller" }));
-    expect(screen.getByRole("status")).toHaveTextContent("kommer i fase 4");
+    expect(screen.getByRole("alert")).toHaveTextContent("Der er ikke bogført noget på bilaget endnu.");
   });
 
   it("går tilbage til forsiden med [Til forside]", async () => {

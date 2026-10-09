@@ -22,12 +22,21 @@ function medKnapnavne(tekst: string): ReactNode[] {
   );
 }
 
+/** Oplysninger om en igangværende opgave, der kan fortsættes. */
+export interface Igangvaerende {
+  variant: string;
+  momsstatus: Momsstatus;
+  godkendte: number;
+}
+
 interface ForsideProps {
   onStart: (variant: Variant) => void;
   senesteVarianter?: string[];
+  igangvaerende?: Igangvaerende | null;
+  onFortsaet?: () => void;
 }
 
-export function Forside({ onStart, senesteVarianter = [] }: ForsideProps) {
+export function Forside({ onStart, senesteVarianter = [], igangvaerende = null, onFortsaet }: ForsideProps) {
   const [momsstatus, setMomsstatus] = useState<Momsstatus | null>(null);
   const [variantTekst, setVariantTekst] = useState("");
   const [variantFejl, setVariantFejl] = useState<string | null>(null);
@@ -53,6 +62,17 @@ export function Forside({ onStart, senesteVarianter = [] }: ForsideProps) {
 
   return (
     <main className="forside">
+      {igangvaerende && (
+        <section className="igangvaerende" aria-labelledby="igangvaerende-titel">
+          <p>
+            <strong id="igangvaerende-titel">Igangværende opgave:</strong> variant {igangvaerende.variant} ·{" "}
+            {MOMSSTATUS_KNAP[igangvaerende.momsstatus].toLowerCase()} · {igangvaerende.godkendte} af 20 bilag godkendt
+          </p>
+          <button type="button" className="knap knap-primaer knap-lille" onClick={onFortsaet}>
+            Fortsæt opgaven
+          </button>
+        </section>
+      )}
       <section className="kontekst" aria-labelledby="kontekst-titel">
         <h2 id="kontekst-titel">Opgaven</h2>
         <p>{medKnapnavne(KONTEKST)}</p>

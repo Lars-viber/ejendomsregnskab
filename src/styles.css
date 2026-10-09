@@ -121,20 +121,42 @@ h2 {
   padding: 4px 12px;
 }
 
+.knap-fare {
+  color: white;
+  background: var(--roed);
+  border: 1px solid var(--roed);
+}
+
+.knap-fare:hover {
+  background: #842d27;
+}
+
 /* Forside */
 .forside {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   width: min(1040px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 18px 0;
+  padding: 12px 0;
 }
 
 .forside section {
-  padding: 14px 18px;
+  padding: 10px 18px;
   background: var(--flade);
   border: 1px solid var(--kant);
   border-radius: 12px;
+}
+
+/* Igangværende opgave, der kan fortsættes (som i reference-applikationen). */
+.forside .igangvaerende {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 12px 4px 18px;
+  background: var(--lysblaa);
+  border-color: var(--sekundaer);
+  border-left: 5px solid var(--sekundaer);
 }
 
 .forside h2 {
@@ -258,6 +280,60 @@ h2 {
   box-shadow: 0 8px 24px rgba(40, 84, 126, 0.22);
 }
 
+.besked ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+/* Grøn og rød besked efter [Kontroller] (7.1). */
+.besked-korrekt {
+  background: var(--lysgroen);
+  border-color: var(--groen);
+  border-left-color: var(--groen);
+}
+
+.besked-forkert {
+  background: var(--lysroed);
+  border-color: var(--roed);
+  border-left-color: var(--roed);
+}
+
+/* Bekræftelsesdialog */
+.dialog-baggrund {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(23, 43, 58, 0.45);
+}
+
+.dialog {
+  width: min(520px, 100%);
+  padding: 18px 20px;
+  background: var(--flade);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(23, 43, 58, 0.3);
+}
+
+.dialog h2 {
+  margin-bottom: 8px;
+  color: var(--primaer-moerk);
+  font-size: 1.05rem;
+}
+
+.dialog p {
+  margin: 0 0 16px;
+}
+
+.dialog-knapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* ---------- Bogføringsbilledet (Reference.docx afsnit 6) ---------- */
 
 /* Hele billedet fylder vinduet; kun kolonnerne scroller (6.2 og 6.3). */
@@ -377,6 +453,11 @@ h2 {
   background: var(--lysblaa);
 }
 
+/* Det aktuelle bilag, når et tidligere bilag vises. */
+.statusbar button.er-aktuelt {
+  border: 2px solid var(--sekundaer);
+}
+
 .statusbar button.er-vist {
   color: white;
   background: var(--sekundaer);
@@ -390,8 +471,13 @@ h2 {
   border-color: var(--groen);
 }
 
+.statusbar button.er-godkendt:hover:not(:disabled) {
+  background: #1f6b55;
+}
+
 .statusbar button.er-godkendt.er-vist {
-  box-shadow: 0 0 0 3px rgba(39, 131, 105, 0.25);
+  border: 2px solid var(--tekst);
+  box-shadow: 0 0 0 3px rgba(39, 131, 105, 0.3);
 }
 
 /* Senere bilag er grå og kan ikke vælges. */
@@ -641,4 +727,52 @@ h2 {
   .momsknapper {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- Kontrol og visning af bilag (Reference.docx afsnit 7) ---------- */
+
+/* Grøn: kontoen har det rigtige nettobeløb. Rød: forkert beløb eller forkert konto (7.1). */
+.postering.markering-korrekt,
+.postering.er-aktiv.markering-korrekt input {
+  background: var(--lysgroen);
+  border: 1px solid var(--groen);
+}
+
+.postering.markering-forkert,
+.postering.er-aktiv.markering-forkert input {
+  background: var(--lysroed);
+  border: 1px solid var(--roed);
+}
+
+.postering.er-aktiv.markering-korrekt,
+.postering.er-aktiv.markering-forkert {
+  background: transparent;
+  border: 0;
+}
+
+.postering.markering-korrekt .bilagsmaerke {
+  color: white;
+  background: var(--groen);
+}
+
+.postering.markering-forkert .bilagsmaerke {
+  color: white;
+  background: var(--roed);
+}
+
+/* Et tidligere bilag, der vises: dets posteringer fremhæves (7.2). */
+.postering.markering-fremhaevet {
+  font-weight: 700;
+  background: var(--lysblaa);
+  border: 1px solid var(--sekundaer);
+}
+
+.postering.markering-fremhaevet .bilagsmaerke {
+  color: white;
+  background: var(--sekundaer);
+}
+
+/* Et godkendt bilag vises med grøn kant i Boks 1. */
+.bilagstekst.er-godkendt {
+  border-left-color: var(--groen);
 }

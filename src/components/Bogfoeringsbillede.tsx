@@ -1,15 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { fortolkBeloeb } from "../domain/beloeb";
 import { aktueltBilag, kanBogfoerePaa, kanVaelgeBilag, naesteBilag } from "../domain/fremdrift";
 import type { Konto } from "../domain/kontoplan";
+import { kontrollerBilag, type Kontrolresultat } from "../domain/kontrol";
 import { MOMSSTATUS_KNAP } from "../domain/momsstatus";
 import { ANTAL_BILAG, synligeKonti, type Opgave, type Postering, type Side } from "../domain/opgave";
-import { TKonto, type TKontoHandlinger } from "./TKonto";
+import type { Session } from "../session/session";
+import { TKonto, type PosteringsMarkering, type TKontoHandlinger } from "./TKonto";
 
 interface BogfoeringsbilledeProps {
   opgave: Opgave;
+  session: Session;
+  onSessionChange: (session: Session) => void;
   onTilForside: () => void;
 }
+
+type Besked = { slags: "korrekt" | "forkert" | "info"; titel: string; linjer: string[] };
 
 function Statusbar({
   opgave,
@@ -26,25 +32,18 @@ function Statusbar({
   return (
     <nav className="statusbar" aria-label="Bilagenes status">
       {Array.from({ length: ANTAL_BILAG }, (_, i) => i + 1).map((nummer) => {
-        const findes = opgave.bilag.some((bilag) => bilag.nummer === nummer);
         const kanVaelges = kanVaelgeBilag(opgave, godkendte, nummer);
         const godkendt = godkendte.includes(nummer);
         const vist = nummer === vistBilag;
-        const status = !findes
-          ? "findes ikke"
-          : godkendt
-            ? "godkendt"
-            : nummer === aktuelt
-              ? "aktuelt bilag"
-              : "ikke tilgængeligt endnu";
+        const status = godkendt ? "godkendt" : nummer === aktuelt ? "aktuelt bilag" : "ikke tilgængeligt endnu";
         return (
           <button
             key={nummer}
             type="button"
-            className={[godkendt && "er-godkendt", vist && "er-vist"].filter(Boolean).join(" ")}
+            className={[godkendt && "er-godkendt", nummer === aktuelt && "er-aktuelt", vist && "er-vist"].filter(Boolean).join(" ")}
             disabled={!kanVaelges}
             aria-current={vist ? "step" : undefined}
-            aria-label={`Bilag ${nummer}, ${status}`}
+            aria-label={`Bilag ${nummer}, ${status}${vist ? ", vises" : ""}`}
             title={`Bilag ${nummer}, ${status}`}
             onClick={() => onVaelg(nummer)}
           >
@@ -67,6 +66,7 @@ function Kolonne({
   posteringer,
   vistBilag,
   kanBogfoere,
+  markeringer,
   handlinger,
 }: {
   id: string;
@@ -76,6 +76,7 @@ function Kolonne({
   posteringer: Postering[];
   vistBilag: number;
   kanBogfoere: boolean;
+  markeringer: Record<string, PosteringsMarkering>;
   handlinger: TKontoHandlinger;
 }) {
   return (
@@ -92,6 +93,7 @@ function Kolonne({
             posteringer={posteringer.filter((postering) => postering.konto === konto.nummer)}
             aktivtBilag={vistBilag}
             kanBogfoere={kanBogfoere}
+            markeringer={markeringer}
             {...handlinger}
           />
         ))}
@@ -100,26 +102,30 @@ function Kolonne({
   );
 }
 
-export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeProps) {
-  const [posteringer, setPosteringer] = useState<Postering[]>([]);
-  // Godkendte bilag udfyldes af [Kontroller] i fase 4; indtil da er listen tom.
-  const [godkendte] = useState<number[]>([]);
-  const [vistBilag, setVistBilag] = useState(opgave.bilag[0].nummer);
-  const [besked, setBesked] = useState<string | null>(null);
-  const naesteId = useRef(1);
+/** Nyt, entydigt id til en postering. */
+function nytId(posteringer: Postering[]): string {
+  const hoejeste = posteringer.reduce((maks, p) => Math.max(maks, Number(p.id.replace(/\D/g, "")) || 0), 0);
+  return `p${hoejeste + 1}`;
+}
+
+export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilForside }: BogfoeringsbilledeProps) {
+  const { posteringer, godkendte, vistBilag, nyligtGodkendt } = session;
+  const [kontrol, setKontrol] = useState<{ bilag: number; resultat: Kontrolresultat } | null>(null);
+  const [besked, setBesked] = useState<Besked | null>(null);
   const konti = useMemo(() => synligeKonti(opgave.variant.momsstatus), [opgave]);
   const bilag = opgave.bilag.find((b) => b.nummer === vistBilag) ?? opgave.bilag[0];
+  const aktuelt = aktueltBilag(opgave, godkendte);
   const kanBogfoere = kanBogfoerePaa(opgave, godkendte, vistBilag);
   const naeste = naesteBilag(opgave, godkendte, vistBilag);
+  const vistGodkendt = godkendte.includes(vistBilag);
 
-  useEffect(() => {
-    if (!besked) return;
-    const timer = window.setTimeout(() => setBesked(null), 6000);
-    return () => window.clearTimeout(timer);
-  }, [besked]);
+  const opdater = (aendring: Partial<Session>) =>
+    onSessionChange({ ...session, ...aendring, opdateret: new Date().toISOString() });
 
-  const vaelgBilag = (nummer: number) => {
-    if (kanVaelgeBilag(opgave, godkendte, nummer)) setVistBilag(nummer);
+  // Enhver ændring på bilaget fjerner den gamle kontrol (farver og hjælpetekst).
+  const nulstilKontrol = () => {
+    setKontrol(null);
+    setBesked(null);
   };
 
   const handlinger: TKontoHandlinger = {
@@ -127,23 +133,67 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
       if (!kanBogfoere) return "Bilaget er låst.";
       const resultat = fortolkBeloeb(udtryk);
       if (!resultat.ok) return resultat.fejl;
-      const id = `p${naesteId.current++}`;
-      setPosteringer((liste) => [...liste, { id, bilag: vistBilag, konto, side, udtryk: udtryk.trim(), oere: resultat.oere }]);
+      const ny: Postering = { id: nytId(posteringer), bilag: vistBilag, konto, side, udtryk: udtryk.trim(), oere: resultat.oere };
+      opdater({ posteringer: [...posteringer, ny] });
+      nulstilKontrol();
       return null;
     },
     onRet: (id: string, udtryk: string) => {
       if (!kanBogfoere) return "Bilaget er låst.";
       const resultat = fortolkBeloeb(udtryk);
       if (!resultat.ok) return resultat.fejl;
-      setPosteringer((liste) =>
-        liste.map((p) => (p.id === id ? { ...p, udtryk: udtryk.trim(), oere: resultat.oere } : p)),
-      );
+      opdater({ posteringer: posteringer.map((p) => (p.id === id ? { ...p, udtryk: udtryk.trim(), oere: resultat.oere } : p)) });
+      nulstilKontrol();
       return null;
     },
     onSlet: (id: string) => {
-      if (kanBogfoere) setPosteringer((liste) => liste.filter((p) => p.id !== id));
+      if (!kanBogfoere) return;
+      opdater({ posteringer: posteringer.filter((p) => p.id !== id) });
+      nulstilKontrol();
     },
   };
+
+  const kontroller = () => {
+    if (!kanBogfoere) return;
+    const resultat = kontrollerBilag(bilag.facit, posteringer.filter((p) => p.bilag === bilag.nummer));
+    setKontrol({ bilag: bilag.nummer, resultat });
+    if (resultat.korrekt) {
+      // 7.2: et korrekt bilag godkendes og låses; der går først videre ved [Næste bilag].
+      opdater({ godkendte: [...godkendte, bilag.nummer], nyligtGodkendt: bilag.nummer });
+      const sidste = bilag.nummer === ANTAL_BILAG;
+      setBesked({
+        slags: "korrekt",
+        titel: `Bilag ${bilag.nummer} er korrekt bogført.`,
+        linjer: [sidste ? "Alle 20 bilag er bogført. Saldiopgørelsen kommer i fase 5." : "Tryk [Næste bilag] for at fortsætte."],
+      });
+    } else {
+      setBesked({ slags: "forkert", titel: `Bilag ${bilag.nummer} er ikke korrekt bogført endnu.`, linjer: resultat.hjaelpetekster });
+    }
+  };
+
+  const gaaTil = (nummer: number, aendring: Partial<Session> = {}) => {
+    if (!kanVaelgeBilag(opgave, godkendte, nummer)) return;
+    opdater({ vistBilag: nummer, ...aendring });
+    setBesked(null);
+  };
+
+  // Markeringer: grøn/rød efter kontrol, grøn for det netop godkendte bilag, fremhævet ved visning.
+  const markeringer: Record<string, PosteringsMarkering> = {};
+  for (const p of posteringer) {
+    if (p.bilag !== vistBilag) continue;
+    if (kontrol?.bilag === vistBilag && !vistGodkendt) markeringer[p.id] = kontrol.resultat.posteringer[p.id];
+    else if (vistBilag === nyligtGodkendt) markeringer[p.id] = "korrekt";
+    else if (vistGodkendt) markeringer[p.id] = "fremhaevet";
+  }
+
+  const instruktion =
+    vistBilag === nyligtGodkendt
+      ? naeste !== null
+        ? "Bilaget er korrekt bogført. Tryk [Næste bilag]"
+        : "Alle bilag er korrekt bogført"
+      : vistGodkendt
+        ? `Tidligere bilag – kun visning. Aktuelt bilag: ${aktuelt ?? ANTAL_BILAG}`
+        : "Bogfør bilaget og tryk [Kontroller]";
 
   const momsTekst =
     MOMSSTATUS_KNAP[opgave.variant.momsstatus] +
@@ -161,14 +211,7 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
             </span>
           </h1>
           <div className="boks1-knapper">
-            <button
-              type="button"
-              className="knap knap-primaer"
-              disabled={!kanBogfoere}
-              onClick={() =>
-                setBesked("[Kontroller] kommer i fase 4. Indtil da kan bilaget ikke godkendes, og du kan ikke gå videre fra bilaget.")
-              }
-            >
+            <button type="button" className="knap knap-primaer" disabled={!kanBogfoere} onClick={kontroller}>
               Kontroller
             </button>
             <button
@@ -176,7 +219,7 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
               className="knap knap-sekundaer"
               disabled={naeste === null}
               title={naeste === null ? "Bilaget skal være korrekt bogført og kontrolleret, før du kan gå videre." : undefined}
-              onClick={() => naeste !== null && setVistBilag(naeste)}
+              onClick={() => naeste !== null && gaaTil(naeste, { nyligtGodkendt: null })}
             >
               Næste bilag
             </button>
@@ -185,17 +228,15 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
             </button>
           </div>
         </div>
-        <p className="bilagstekst" aria-live="polite">
+        <p className={`bilagstekst${vistGodkendt ? " er-godkendt" : ""}`} aria-live="polite">
           <strong>
             Bilag {bilag.nummer} af {ANTAL_BILAG}:
           </strong>{" "}
           {bilag.tekst}
         </p>
         <div className="boks1-bund">
-          <Statusbar opgave={opgave} godkendte={godkendte} vistBilag={vistBilag} onVaelg={vaelgBilag} />
-          <p className="instruktion">
-            Bogfør bilaget og tryk <span className="knapnavn">[Kontroller]</span>
-          </p>
+          <Statusbar opgave={opgave} godkendte={godkendte} vistBilag={vistBilag} onVaelg={(n) => gaaTil(n)} />
+          <p className="instruktion">{medKnapnavne(instruktion)}</p>
         </div>
       </section>
 
@@ -208,6 +249,7 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
           posteringer={posteringer}
           vistBilag={vistBilag}
           kanBogfoere={kanBogfoere}
+          markeringer={markeringer}
           handlinger={handlinger}
         />
         <Kolonne
@@ -218,18 +260,43 @@ export function Bogfoeringsbillede({ opgave, onTilForside }: BogfoeringsbilledeP
           posteringer={posteringer}
           vistBilag={vistBilag}
           kanBogfoere={kanBogfoere}
+          markeringer={markeringer}
           handlinger={handlinger}
         />
       </div>
 
       {besked && (
-        <div className="besked besked-info" role="status">
-          <span>{besked}</span>
+        <div className={`besked besked-${besked.slags}`} role={besked.slags === "forkert" ? "alert" : "status"}>
+          <div>
+            <strong>{besked.titel}</strong>
+            {besked.linjer.length === 1 ? (
+              <span> {medKnapnavne(besked.linjer[0])}</span>
+            ) : (
+              <ul>
+                {besked.linjer.map((linje) => (
+                  <li key={linje}>{linje}</li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button type="button" className="knap knap-sekundaer knap-lille" onClick={() => setBesked(null)}>
             Luk
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+/** Fremhæver knapnavne som [Næste bilag]. */
+function medKnapnavne(tekst: string) {
+  return tekst.split(/(\[[^\]]+\])/g).map((del, i) =>
+    /^\[[^\]]+\]$/.test(del) ? (
+      <span key={i} className="knapnavn">
+        {del}
+      </span>
+    ) : (
+      del
+    ),
   );
 }
