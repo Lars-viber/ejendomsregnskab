@@ -17,7 +17,7 @@ interface BogfoeringsbilledeProps {
 
 type Besked = { slags: "korrekt" | "forkert" | "info"; titel: string; linjer: string[] };
 
-function Statusbar({
+export function Statusbar({
   opgave,
   godkendte,
   vistBilag,
@@ -118,6 +118,7 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
   const kanBogfoere = kanBogfoerePaa(opgave, godkendte, vistBilag);
   const naeste = naesteBilag(opgave, godkendte, vistBilag);
   const vistGodkendt = godkendte.includes(vistBilag);
+  const alleGodkendt = godkendte.length === ANTAL_BILAG;
 
   const opdater = (aendring: Partial<Session>) =>
     onSessionChange({ ...session, ...aendring, opdateret: new Date().toISOString() });
@@ -164,7 +165,7 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
       setBesked({
         slags: "korrekt",
         titel: `Bilag ${bilag.nummer} er korrekt bogført.`,
-        linjer: [sidste ? "Alle 20 bilag er bogført. Saldiopgørelsen kommer i fase 5." : "Tryk [Næste bilag] for at fortsætte."],
+        linjer: [sidste ? "Alle 20 bilag er bogført. Tryk [Til saldiopgørelse]." : "Tryk [Næste bilag] for at fortsætte."],
       });
     } else {
       setBesked({ slags: "forkert", titel: `Bilag ${bilag.nummer} er ikke korrekt bogført endnu.`, linjer: resultat.hjaelpetekster });
@@ -190,7 +191,9 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
     vistBilag === nyligtGodkendt
       ? naeste !== null
         ? "Bilaget er korrekt bogført. Tryk [Næste bilag]"
-        : "Alle bilag er korrekt bogført"
+        : "Alle bilag er korrekt bogført. Tryk [Til saldiopgørelse]"
+      : alleGodkendt
+        ? "Alle bilag er bogført. Tryk [Til saldiopgørelse]"
       : vistGodkendt
         ? `Tidligere bilag – kun visning. Aktuelt bilag: ${aktuelt ?? ANTAL_BILAG}`
         : "Bogfør bilaget og tryk [Kontroller]";
@@ -214,18 +217,45 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
             <button type="button" className="knap knap-primaer" disabled={!kanBogfoere} onClick={kontroller}>
               Kontroller
             </button>
-            <button
-              type="button"
-              className="knap knap-sekundaer"
-              disabled={naeste === null}
-              title={naeste === null ? "Bilaget skal være korrekt bogført og kontrolleret, før du kan gå videre." : undefined}
-              onClick={() => naeste !== null && gaaTil(naeste, { nyligtGodkendt: null })}
-            >
-              Næste bilag
-            </button>
+            {alleGodkendt ? (
+              <button type="button" className="knap knap-primaer" onClick={() => opdater({ fase: "saldi", nyligtGodkendt: null })}>
+                Til saldiopgørelse
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="knap knap-sekundaer"
+                disabled={naeste === null}
+                title={naeste === null ? "Bilaget skal være korrekt bogført og kontrolleret, før du kan gå videre." : undefined}
+                onClick={() => naeste !== null && gaaTil(naeste, { nyligtGodkendt: null })}
+              >
+                Næste bilag
+              </button>
+            )}
             <button type="button" className="knap knap-sekundaer" onClick={onTilForside}>
               Til forside
             </button>
+            {/* Midlertidig testmulighed – findes kun i den lokale udgave (pnpm dev), aldrig på GitHub Pages. */}
+            {import.meta.env.DEV && (
+              <button
+                type="button"
+                className="knap knap-test"
+                title="Kun lokal test: bogfører alle 20 bilag med facit og går til saldiopgørelsen"
+                onClick={() =>
+                  opdater({
+                    posteringer: opgave.bilag.flatMap((b) =>
+                      b.facit.map((l, i) => ({ id: `t${b.nummer}-${i}`, bilag: b.nummer, konto: l.konto, side: l.side, udtryk: String(l.oere / 100).replace(".", ","), oere: l.oere })),
+                    ),
+                    godkendte: opgave.bilag.map((b) => b.nummer),
+                    vistBilag: ANTAL_BILAG,
+                    nyligtGodkendt: null,
+                    fase: "saldi",
+                  })
+                }
+              >
+                Test: til saldiopgørelse
+              </button>
+            )}
           </div>
         </div>
         <p className={`bilagstekst${vistGodkendt ? " er-godkendt" : ""}`} aria-live="polite">
@@ -289,7 +319,7 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
 }
 
 /** Fremhæver knapnavne som [Næste bilag]. */
-function medKnapnavne(tekst: string) {
+export function medKnapnavne(tekst: string) {
   return tekst.split(/(\[[^\]]+\])/g).map((del, i) =>
     /^\[[^\]]+\]$/.test(del) ? (
       <span key={i} className="knapnavn">

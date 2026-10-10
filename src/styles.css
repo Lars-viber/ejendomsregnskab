@@ -776,3 +776,141 @@ h2 {
 .bilagstekst.er-godkendt {
   border-left-color: var(--groen);
 }
+
+/* ---------- Saldiopgørelse og afslutning (Reference.docx afsnit 7.3) ---------- */
+
+.saldofelt {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 4px 6px 6px;
+  border: 0;
+  border-top: 2px solid var(--tekst);
+  background: #f3f8fd;
+}
+
+.saldofelt legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-weight: 700;
+  color: var(--primaer-moerk);
+}
+
+.saldofelt input[type="text"],
+.saldofelt > input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 4px;
+  font: inherit;
+  text-align: right;
+  background: var(--flade);
+  border: 1px solid #a9c3dc;
+  border-radius: 4px;
+}
+
+.saldo-sider {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
+.saldo-sider label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.saldo-sider input {
+  margin: 0;
+  accent-color: var(--primaer);
+}
+
+.saldofelt.markering-korrekt {
+  background: var(--lysgroen);
+}
+
+.saldofelt.markering-korrekt > input {
+  border-color: var(--groen);
+}
+
+.saldofelt.markering-forkert {
+  background: var(--lysroed);
+}
+
+.saldofelt.markering-forkert > input {
+  border-color: var(--roed);
+}
+
+/* Afsluttede T-konti: saldo efter sidste bilag og ens summer på begge sider. */
+.postering.er-afslutning {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 4px;
+  font-weight: 700;
+  color: var(--primaer-moerk);
+  background: var(--lysblaa);
+  border: 1px solid var(--sekundaer);
+}
+
+.postering.er-afslutning .beloeb {
+  margin-left: auto;
+}
+
+.tkonto-sum {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 2px solid var(--tekst);
+  border-bottom: 4px double var(--tekst);
+  font-weight: 700;
+}
+
+.tkonto-sum span {
+  padding: 2px 6px;
+}
+
+.tkonto-sum span + span {
+  border-left: 2px solid var(--tekst);
+}
+
+/* Pop op-vindue med alle bilag. */
+.dialog.bilagsvindue {
+  width: min(900px, 100%);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.bilagsvindue-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.bilagsliste {
+  margin: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bilagsliste li {
+  padding: 8px 0;
+  border-top: 1px solid var(--kant);
+}
+
+.bilagsliste p {
+  margin: 2px 0 0;
+}
+
+/* Midlertidig testknap – vises kun i den lokale udgave. */
+.knap-test {
+  color: #5b3b00;
+  background: #ffe7a8;
+  border: 1px dashed #b07c00;
+}

@@ -1,5 +1,5 @@
 import { danVariant } from "../src/domain/variant";
-import { GENERATOR_VERSION } from "../src/generator/generator";
+import { GENERATOR_VERSION, danOpgave } from "../src/generator/generator";
 import {
   SESSION_NOEGLE,
   gemSession,
@@ -13,10 +13,11 @@ import {
 
 describe("gemning af fremskridt (Reference.docx afsnit 4)", () => {
   const variant = danVariant("delvis", 483915);
+  const opgave = danOpgave(variant, 2026);
 
   it("gemmer og indlæser en session uændret", () => {
     const session = {
-      ...nySession(variant, 2026),
+      ...nySession(opgave),
       posteringer: [{ id: "p1", bilag: 1, konto: 20004, side: "debet" as const, udtryk: "100", oere: 10_000 }],
       godkendte: [1],
       vistBilag: 2,
@@ -26,7 +27,7 @@ describe("gemning af fremskridt (Reference.docx afsnit 4)", () => {
   });
 
   it("låser årstallet i sessionen (8.1)", () => {
-    gemSession(nySession(variant, 2026));
+    gemSession(nySession(opgave));
     expect(indlaesSession()?.aar).toBe(2026);
   });
 
@@ -35,15 +36,15 @@ describe("gemning af fremskridt (Reference.docx afsnit 4)", () => {
     expect(indlaesSession()).toBeNull();
     expect(localStorage.getItem(SESSION_NOEGLE)).toBeNull();
 
-    gemSession({ ...nySession(variant, 2026), generatorversion: GENERATOR_VERSION + 1 });
+    gemSession({ ...nySession(opgave), generatorversion: GENERATOR_VERSION + 1 });
     expect(indlaesSession()).toBeNull();
 
-    gemSession({ ...nySession(variant, 2026), variant: "9999999" });
+    gemSession({ ...nySession(opgave), variant: "9999999" });
     expect(indlaesSession()).toBeNull();
   });
 
   it("retter huller i de godkendte bilag og et ugyldigt vist bilag", () => {
-    const renset = rensSession({ ...nySession(variant, 2026), godkendte: [1, 2, 4], vistBilag: 9, nyligtGodkendt: 4 });
+    const renset = rensSession({ ...nySession(opgave), godkendte: [1, 2, 4], vistBilag: 9, nyligtGodkendt: 4 });
     expect(renset?.godkendte).toEqual([1, 2]);
     expect(renset?.vistBilag).toBe(3);
     expect(renset?.nyligtGodkendt).toBeNull();
@@ -51,7 +52,7 @@ describe("gemning af fremskridt (Reference.docx afsnit 4)", () => {
 
   it("fjerner posteringer på bilag, som endnu ikke kan nås", () => {
     const renset = rensSession({
-      ...nySession(variant, 2026),
+      ...nySession(opgave),
       posteringer: [
         { id: "p1", bilag: 1, konto: 20004, side: "debet", udtryk: "1", oere: 100 },
         { id: "p2", bilag: 5, konto: 20004, side: "debet", udtryk: "1", oere: 100 },
@@ -61,7 +62,7 @@ describe("gemning af fremskridt (Reference.docx afsnit 4)", () => {
   });
 
   it("sletter sessionen", () => {
-    gemSession(nySession(variant, 2026));
+    gemSession(nySession(opgave));
     sletSession();
     expect(indlaesSession()).toBeNull();
   });

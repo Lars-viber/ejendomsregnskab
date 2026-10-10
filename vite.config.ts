@@ -11,5 +11,7 @@ export default defineConfig({
     setupFiles: "./tests/setup.ts",
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     exclude: ["tests/tmp/**", "node_modules/**"],
+    // Mange tests danner opgaver; ved samtidig kørsel kan enkelte tage mere end standardgrænsen på 5 sekunder.
+    testTimeout: 30_000,
   },
 });

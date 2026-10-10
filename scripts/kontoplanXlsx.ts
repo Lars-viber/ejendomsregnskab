@@ -32,7 +32,7 @@ export interface KontoplanData {
 const FORVENTEDE_KOLONNER = ["Konto nr.", "Kategori", "Kontonavn", "Indhold", "Inklusive moms"];
 
 /** Udpakker alle filer i et zip-arkiv (xlsx er et zip-arkiv). */
-function udpakZip(buffer: Buffer): Map<string, Buffer> {
+export function udpakZip(buffer: Buffer): Map<string, Buffer> {
   const filer = new Map<string, Buffer>();
   let slut = -1;
   for (let i = buffer.length - 22; i >= 0; i--) {

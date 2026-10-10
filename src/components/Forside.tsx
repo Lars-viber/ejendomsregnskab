@@ -27,7 +27,11 @@ export interface Igangvaerende {
   variant: string;
   momsstatus: Momsstatus;
   godkendte: number;
+  fase: "bogfoering" | "saldi" | "afsluttet";
 }
+
+const FASETEKST = (i: Igangvaerende) =>
+  i.fase === "afsluttet" ? "opgaven er gennemført" : i.fase === "saldi" ? "saldiopgørelse" : `${i.godkendte} af 20 bilag godkendt`;
 
 interface ForsideProps {
   onStart: (variant: Variant) => void;
@@ -65,11 +69,11 @@ export function Forside({ onStart, senesteVarianter = [], igangvaerende = null, 
       {igangvaerende && (
         <section className="igangvaerende" aria-labelledby="igangvaerende-titel">
           <p>
-            <strong id="igangvaerende-titel">Igangværende opgave:</strong> variant {igangvaerende.variant} ·{" "}
-            {MOMSSTATUS_KNAP[igangvaerende.momsstatus].toLowerCase()} · {igangvaerende.godkendte} af 20 bilag godkendt
+            <strong id="igangvaerende-titel">{igangvaerende.fase === "afsluttet" ? "Seneste opgave:" : "Igangværende opgave:"}</strong> variant{" "}
+            {igangvaerende.variant} · {MOMSSTATUS_KNAP[igangvaerende.momsstatus].toLowerCase()} · {FASETEKST(igangvaerende)}
           </p>
           <button type="button" className="knap knap-primaer knap-lille" onClick={onFortsaet}>
-            Fortsæt opgaven
+            {igangvaerende.fase === "afsluttet" ? "Se oversigten" : "Fortsæt opgaven"}
           </button>
         </section>
       )}

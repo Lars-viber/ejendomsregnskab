@@ -124,7 +124,7 @@ function tilOere(vaerdi: number): number {
  * - et beløb, f.eks. "12345,67", "12.345,67" eller "12345"
  * - et regneudtryk, der starter med "=", f.eks. "=1000*1,25" eller "=(4.000+250)/2"
  */
-export function fortolkBeloeb(indtastet: string): BeloebResultat {
+export function fortolkBeloeb(indtastet: string, { tilladNul = false }: { tilladNul?: boolean } = {}): BeloebResultat {
   const tekst = indtastet.trim().replace(/\s/g, "");
   if (tekst === "") return { ok: false, fejl: "Skriv et beløb." };
 
@@ -149,6 +149,7 @@ export function fortolkBeloeb(indtastet: string): BeloebResultat {
 
   if (!Number.isFinite(vaerdi)) return { ok: false, fejl: FEJL_UDTRYK };
   const oere = tilOere(vaerdi);
-  if (oere <= 0) return { ok: false, fejl: "Beløbet skal være større end 0." };
+  if (tilladNul && oere === 0) return { ok: true, oere };
+  if (oere <= 0) return { ok: false, fejl: tilladNul ? "Saldoen kan ikke være negativ. Vælg i stedet debet eller kredit." : "Beløbet skal være større end 0." };
   return { ok: true, oere };
 }

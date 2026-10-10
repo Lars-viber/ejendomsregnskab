@@ -3,12 +3,16 @@
  * som reference-applikationen: én igangværende opgave gemmes i localStorage efter hver ændring.
  * Opgaven selv gemmes ikke; den dannes igen ud fra variantnummer og årstal (8.1 og 8.5).
  */
-import { ANTAL_BILAG, type Postering } from "../domain/opgave";
+import { ANTAL_BILAG, type Opgave, type Postering } from "../domain/opgave";
 import { KONTOPLAN } from "../domain/kontoplan";
-import { fortolkVariantnummer, type Variant } from "../domain/variant";
+import type { SaldoSide, SaldoSvar } from "../domain/saldi";
+import { fortolkVariantnummer } from "../domain/variant";
 import { GENERATOR_VERSION } from "../generator/generator";
 
-export const SESSION_SCHEMA = 1;
+export const SESSION_SCHEMA = 2;
+
+/** Bogføring af bilagene → saldiopgørelse (7.3) → afsluttende oversigt. */
+export type Fase = "bogfoering" | "saldi" | "afsluttet";
 export const SESSION_NOEGLE = "ejendomsregnskab.session";
 export const SENESTE_NOEGLE = "ejendomsregnskab.seneste-varianter";
 
@@ -19,6 +23,8 @@ export interface Session {
   variant: string;
   /** Årstallet låses, når opgaven dannes (8.1). */
   aar: number;
+  /** Kontrolsum af opgavens bilag og saldi; passer den ikke, er opgaven ændret, og fremskridtet kasseres. */
+  fingeraftryk: string;
   posteringer: Postering[];
   /** Godkendte bilag; altid bilag 1, 2, … uden huller. */
   godkendte: number[];
@@ -26,21 +32,48 @@ export interface Session {
   vistBilag: number;
   /** Senest godkendte bilag, indtil der trykkes [Næste bilag] (vises grønt, 7.2). */
   nyligtGodkendt: number | null;
+  fase: Fase;
+  /** Den studerendes saldiopgørelse pr. konto (kontonummer som nøgle). */
+  saldiSvar: Record<string, SaldoSvar>;
   opdateret: string;
 }
 
-export function nySession(variant: Variant, aar: number): Session {
+/** Kontrolsum af opgavens indhold (bilagstekster, facit og saldi ved start). */
+export function fingeraftryk(opgave: Opgave): string {
+  const tekst = JSON.stringify([opgave.saldi, opgave.bilag.map((b) => [b.tekst, b.facit])]);
+  let h = 2166136261;
+  for (let i = 0; i < tekst.length; i++) h = Math.imul(h ^ tekst.charCodeAt(i), 16777619) >>> 0;
+  return h.toString(36);
+}
+
+export function nySession(opgave: Opgave): Session {
   return {
     schema: SESSION_SCHEMA,
     generatorversion: GENERATOR_VERSION,
-    variant: variant.nummer,
-    aar,
+    variant: opgave.variant.nummer,
+    aar: opgave.aar,
+    fingeraftryk: fingeraftryk(opgave),
     posteringer: [],
     godkendte: [],
     vistBilag: 1,
     nyligtGodkendt: null,
+    fase: "bogfoering",
+    saldiSvar: {},
     opdateret: new Date().toISOString(),
   };
+}
+
+const SALDOSIDER: readonly (SaldoSide | null)[] = ["debet", "kredit", "ingen", null];
+
+function rensSaldiSvar(data: unknown): Record<string, SaldoSvar> {
+  const resultat: Record<string, SaldoSvar> = {};
+  if (typeof data !== "object" || data === null) return resultat;
+  for (const [konto, svar] of Object.entries(data as Record<string, SaldoSvar>)) {
+    if (!KONTONUMRE.has(Number(konto)) || typeof svar !== "object" || svar === null) continue;
+    if (typeof svar.udtryk !== "string" || !SALDOSIDER.includes(svar.side)) continue;
+    resultat[konto] = { udtryk: svar.udtryk, side: svar.side };
+  }
+  return resultat;
 }
 
 const KONTONUMRE = new Set(KONTOPLAN.map((k) => k.nummer));
@@ -66,6 +99,7 @@ export function rensSession(data: unknown): Session | null {
   const s = data as Session;
   if (typeof s !== "object" || s === null) return null;
   if (s.schema !== SESSION_SCHEMA || s.generatorversion !== GENERATOR_VERSION) return null;
+  if (typeof s.fingeraftryk !== "string") return null;
   if (typeof s.variant !== "string" || !fortolkVariantnummer(s.variant).ok) return null;
   if (!Number.isInteger(s.aar) || s.aar < 2000 || s.aar > 2200) return null;
   if (!Array.isArray(s.posteringer) || !s.posteringer.every(erPostering)) return null;
@@ -81,15 +115,21 @@ export function rensSession(data: unknown): Session | null {
   const nyligtGodkendt =
     erBilagsnummer(s.nyligtGodkendt) && s.nyligtGodkendt === godkendte[godkendte.length - 1] ? s.nyligtGodkendt : null;
 
+  // Saldiopgørelsen og den afsluttende oversigt kræver, at alle bilag er godkendt.
+  const fase: Fase = godkendte.length === ANTAL_BILAG && (s.fase === "saldi" || s.fase === "afsluttet") ? s.fase : "bogfoering";
+
   return {
     schema: SESSION_SCHEMA,
     generatorversion: GENERATOR_VERSION,
     variant: s.variant,
     aar: s.aar,
+    fingeraftryk: s.fingeraftryk,
     posteringer,
     godkendte,
     vistBilag,
     nyligtGodkendt,
+    fase,
+    saldiSvar: rensSaldiSvar(s.saldiSvar),
     opdateret: typeof s.opdateret === "string" ? s.opdateret : new Date().toISOString(),
   };
 }

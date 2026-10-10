@@ -12,7 +12,7 @@ import { nySession } from "../src/session/session";
 
 /** Bogføringsbilledet med sin egen session (i appen ligger sessionen i App). */
 function Vaert({ opgave, onTilForside }: { opgave: Opgave; onTilForside: () => void }) {
-  const [session, setSession] = useState(() => nySession(opgave.variant, opgave.aar));
+  const [session, setSession] = useState(() => nySession(opgave));
   return <Bogfoeringsbillede opgave={opgave} session={session} onSessionChange={setSession} onTilForside={onTilForside} />;
 }
 
