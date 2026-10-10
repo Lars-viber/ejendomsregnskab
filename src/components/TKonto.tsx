@@ -34,8 +34,6 @@ interface TKontoProps extends TKontoHandlinger {
   markeringer?: Readonly<Record<string, PosteringsMarkering>>;
   /** Vises under T-kontoen, f.eks. feltet til saldiopgørelsen (7.3). */
   children?: ReactNode;
-  /** Afslutning af T-kontoen i den afsluttende oversigt: saldo efter sidste bilag og summer (7.3). */
-  afslutning?: { side: "debet" | "kredit" | "ingen"; oere: number; sum: number };
   /** Ekstra CSS-klasse på hele T-kontoen (f.eks. grøn/rød saldo). */
   klasse?: string;
 }
@@ -151,14 +149,11 @@ export function TKonto({
   kanBogfoere,
   markeringer = {},
   children,
-  afslutning,
   klasse,
   onTilfoej,
   onRet,
   onSlet,
 }: TKontoProps) {
-  // Saldoen efter sidste bilag står på den side, der gør summerne lige store (afsluttet T-konto).
-  const afslutningsside = afslutning?.side === "debet" ? "kredit" : afslutning?.side === "kredit" ? "debet" : null;
   return (
     <article className={`tkonto${klasse ? ` ${klasse}` : ""}`} aria-label={`${konto.nummer} ${konto.navn}`}>
       {/* Kontonavnet står i direkte forlængelse af kontonummeret og ombrydes ved behov. */}
@@ -205,21 +200,9 @@ export function TKonto({
                 ),
               )}
             {kanBogfoere && <NyPostering konto={konto} side={side} onTilfoej={onTilfoej} />}
-            {afslutning && afslutningsside === side && (
-              <div className="postering er-afslutning">
-                <span>Saldo efter sidste bilag</span>
-                <span className="beloeb">{formaterBeloeb(afslutning.oere)}</span>
-              </div>
-            )}
           </div>
         ))}
       </div>
-      {afslutning && (
-        <div className="tkonto-sum" aria-label={`I alt ${formaterBeloeb(afslutning.sum)} på begge sider`}>
-          <span className="beloeb">{formaterBeloeb(afslutning.sum)}</span>
-          <span className="beloeb">{formaterBeloeb(afslutning.sum)}</span>
-        </div>
-      )}
       {children}
     </article>
   );

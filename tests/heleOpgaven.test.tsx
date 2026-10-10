@@ -70,7 +70,13 @@ async function gennemfoer(momsstatus: Momsstatus, loebenummer: number) {
 
   // Den afsluttende oversigt.
   expect(screen.getByText("Opgaven er gennemført.")).toBeInTheDocument();
-  expect(document.querySelectorAll(".tkonto-sum").length).toBe(saldi.length);
+  // T-kontiene som under bogføringen – uden afslutningslinje og totaler – og saldoen på én linje under kontoen.
+  const SIDE = { debet: "Debet", kredit: "Kredit", ingen: "Ingen saldo" };
+  expect([...document.querySelectorAll(".tkonto-saldo")].map((p) => p.textContent)).toEqual(
+    expect.arrayContaining(saldi.map((s) => `Saldo: ${formaterBeloeb(s.oere)} ${SIDE[s.side]}`)),
+  );
+  expect(document.querySelectorAll(".tkonto-saldo").length).toBe(saldi.length);
+  expect(document.querySelectorAll(".tkonto-sum, .er-afslutning").length).toBe(0);
   expect(JSON.parse(localStorage.getItem(SESSION_NOEGLE)!).fase).toBe("afsluttet");
   return { bruger, opgave };
 }

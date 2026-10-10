@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formaterBeloeb } from "../domain/beloeb";
 import { danExcel, excelFilnavn } from "../domain/excel";
 import { MOMSSTATUS_KNAP } from "../domain/momsstatus";
 import { ANTAL_BILAG, formaterDato, synligeKonti, type Opgave, type Postering } from "../domain/opgave";
@@ -63,15 +64,17 @@ function hentExcel(opgave: Opgave) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Summer for en afsluttet T-konto ud fra saldo ved start og den studerendes posteringer. */
-function afslutningFor(opgave: Opgave, konto: number, posteringer: Postering[]) {
+const SIDETEKST = { debet: "Debet", kredit: "Kredit", ingen: "Ingen saldo" } as const;
+
+/** Saldoen på en T-konto ud fra saldo ved start og den studerendes posteringer. */
+function saldoFor(opgave: Opgave, konto: number, posteringer: Postering[]) {
   let debet = 0;
   let kredit = 0;
   const start = opgave.saldi.find((s) => s.konto === konto);
   if (start) start.side === "debet" ? (debet += start.oere) : (kredit += start.oere);
   for (const p of posteringer) p.side === "debet" ? (debet += p.oere) : (kredit += p.oere);
   const netto = debet - kredit;
-  return { side: netto > 0 ? ("debet" as const) : netto < 0 ? ("kredit" as const) : ("ingen" as const), oere: Math.abs(netto), sum: Math.max(debet, kredit) };
+  return { side: netto > 0 ? ("debet" as const) : netto < 0 ? ("kredit" as const) : ("ingen" as const), oere: Math.abs(netto) };
 }
 
 export function Afslutning({ opgave, session, onTilForside }: AfslutningProps) {
@@ -89,6 +92,7 @@ export function Afslutning({ opgave, session, onTilForside }: AfslutningProps) {
       <div className="tkonto-gitter">
         {liste.map((konto) => {
           const posteringer = session.posteringer.filter((p) => p.konto === konto.nummer);
+          const saldo = saldoFor(opgave, konto.nummer, posteringer);
           return (
             <TKonto
               key={konto.nummer}
@@ -97,9 +101,13 @@ export function Afslutning({ opgave, session, onTilForside }: AfslutningProps) {
               posteringer={posteringer}
               aktivtBilag={0}
               kanBogfoere={false}
-              afslutning={afslutningFor(opgave, konto.nummer, posteringer)}
               {...LAAST}
-            />
+            >
+              {/* Saldoen står under T-kontoen på én linje (7.3). */}
+              <p className="tkonto-saldo">
+                Saldo: {formaterBeloeb(saldo.oere)} {SIDETEKST[saldo.side]}
+              </p>
+            </TKonto>
           );
         })}
       </div>
@@ -131,7 +139,7 @@ export function Afslutning({ opgave, session, onTilForside }: AfslutningProps) {
         </div>
         <p className="bilagstekst er-godkendt">
           <strong>Opgaven er gennemført.</strong> Alle {ANTAL_BILAG} bilag er korrekt bogført, og saldiopgørelsen er korrekt. Herunder ses
-          de afsluttede T-konti med saldoen efter sidste bilag. Med [Vis bilag] kan du se alle bilag, og med [Hent i Excel] kan du gemme
+          T-kontiene med saldoen under hver konto. Med [Vis bilag] kan du se alle bilag, og med [Hent i Excel] kan du gemme
           opgaven med facit.
         </p>
       </section>

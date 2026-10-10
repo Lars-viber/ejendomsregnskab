@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formaterBeloeb, fortolkBeloeb } from "../domain/beloeb";
 import { MOMSSTATUS_KNAP } from "../domain/momsstatus";
 import { ANTAL_BILAG, synligeKonti, type Opgave } from "../domain/opgave";
 import { kontrollerSaldi, saldiEfterSidsteBilag, type SaldoKontrol, type SaldoSide, type SaldoSvar } from "../domain/saldi";
@@ -37,16 +38,31 @@ function SaldoFelt({
   markering?: "korrekt" | "forkert";
   onAendr: (svar: SaldoSvar) => void;
 }) {
+  // Som felterne ved bogføringen (6.4): uden for feltet vises det beregnede beløb formateret;
+  // i feltet vises det, der er skrevet (beløb eller regneudtryk), så det kan rettes.
+  const [harFokus, setHarFokus] = useState(false);
+  const resultat = svar.udtryk.trim() ? fortolkBeloeb(svar.udtryk, { tilladNul: true }) : null;
+  const fejl = !harFokus && resultat && !resultat.ok ? resultat.fejl : null;
+  const vist = harFokus || !resultat || !resultat.ok ? svar.udtryk : formaterBeloeb(resultat.oere);
+
   return (
     <fieldset className={`saldofelt${markering ? ` markering-${markering}` : ""}`} data-markering={markering}>
-      <legend>Saldo efter sidste bilag</legend>
+      <legend>Saldo</legend>
       <input
-        value={svar.udtryk}
+        value={vist}
         inputMode="decimal"
         placeholder="Beløb/=formel"
+        title="Skriv et beløb, f.eks. 12345,67, eller et regneudtryk, der starter med =, f.eks. =1000*1,25"
         aria-label={`Saldo for ${nummer} ${navn}`}
+        aria-invalid={fejl !== null}
         onChange={(event) => onAendr({ ...svar, udtryk: event.target.value })}
+        onFocus={() => setHarFokus(true)}
+        onBlur={() => setHarFokus(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        }}
       />
+      {fejl && <small className="feltfejl">{fejl}</small>}
       <div className="saldo-sider" role="radiogroup" aria-label={`Saldoside for ${nummer} ${navn}`}>
         {SIDER.map(([side, tekst]) => (
           <label key={side}>
