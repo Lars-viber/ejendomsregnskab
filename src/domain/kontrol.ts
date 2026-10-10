@@ -26,6 +26,7 @@ export const HJAELPETEKST = {
   forkertKonto: "En eller flere af de valgte konti er forkerte.",
   manglendeKonto: "Der mangler bogføring på en eller flere konti.",
   forkertBeloeb: "Et eller flere af de indtastede beløb er forkerte.",
+  forkertSide: "Et eller flere beløb står i den forkerte side (debet/kredit).",
 } as const;
 
 function netto(linjer: readonly { konto: number; side: "debet" | "kredit"; oere: number }[]): Map<number, number> {
@@ -54,9 +55,11 @@ export function kontrollerBilag(facit: readonly FacitLinje[], posteringer: reado
     const bogfoerteKonti = new Set(posteringer.map((p) => p.konto));
     if ([...bogfoerteKonti].some((konto) => !facitNetto.has(konto))) hjaelpetekster.push(HJAELPETEKST.forkertKonto);
     if ([...facitNetto.keys()].some((konto) => !bogfoerteKonti.has(konto))) hjaelpetekster.push(HJAELPETEKST.manglendeKonto);
-    if ([...bogfoerteKonti].some((konto) => facitNetto.has(konto) && !kontoKorrekt(konto))) {
-      hjaelpetekster.push(HJAELPETEKST.forkertBeloeb);
-    }
+    // Rigtigt beløb i den forkerte side giver en særskilt hjælpetekst (7.1, version 1.6).
+    const forkerte = [...bogfoerteKonti].filter((konto) => facitNetto.has(konto) && !kontoKorrekt(konto));
+    const iForkertSide = (konto: number) => (studerendeNetto.get(konto) ?? 0) === -(facitNetto.get(konto) ?? 0);
+    if (forkerte.some((konto) => !iForkertSide(konto))) hjaelpetekster.push(HJAELPETEKST.forkertBeloeb);
+    if (forkerte.some(iForkertSide)) hjaelpetekster.push(HJAELPETEKST.forkertSide);
   }
 
   return { korrekt: hjaelpetekster.length === 0, posteringer: markeringer, hjaelpetekster };

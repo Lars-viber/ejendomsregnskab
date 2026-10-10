@@ -75,12 +75,24 @@ describe("kontrol af et bilag (7.1)", () => {
     expect(r.hjaelpetekster).toEqual([HJAELPETEKST.forkertBeloeb]);
   });
 
-  it("markerer et beløb i den forkerte side rødt", () => {
+  it("markerer et beløb i den forkerte side rødt og siger det (7.1, version 1.6)", () => {
     const posteringer = [p(3000, "debet", 11_000), p(30006, "debet", 1_500), p(20004, "debet", 12_500)];
     const r = kontrollerBilag(facit, posteringer);
     expect(r.korrekt).toBe(false);
     expect(markeringer(posteringer)).toEqual(["korrekt", "korrekt", "forkert"]);
     expect(r.hjaelpetekster).toContain(HJAELPETEKST.ubalance);
+    expect(r.hjaelpetekster).toContain("Et eller flere beløb står i den forkerte side (debet/kredit).");
+    expect(r.hjaelpetekster).not.toContain(HJAELPETEKST.forkertBeloeb);
+  });
+
+  it("viser både teksten om forkert side og om forkert beløb, når begge fejl findes", () => {
+    // Debet og kredit byttet om på hele bilaget: balancerer, men alle sider er forkerte.
+    const ombyttet = [p(3000, "kredit", 11_000), p(30006, "kredit", 1_500), p(20004, "debet", 12_500)];
+    expect(kontrollerBilag(facit, ombyttet).hjaelpetekster).toEqual([HJAELPETEKST.forkertSide]);
+    const blandet = [p(3000, "kredit", 11_000), p(30006, "debet", 1_000), p(20004, "kredit", 12_500)];
+    const r = kontrollerBilag(facit, blandet);
+    expect(r.hjaelpetekster).toContain(HJAELPETEKST.forkertBeloeb);
+    expect(r.hjaelpetekster).toContain(HJAELPETEKST.forkertSide);
   });
 
   it("melder ubalance, når debet og kredit ikke stemmer", () => {

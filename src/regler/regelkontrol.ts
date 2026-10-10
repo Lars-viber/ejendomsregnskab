@@ -7,6 +7,7 @@
  */
 import { bankdageIMaaned, erBankdag, sidsteBankdagIDecember } from "../domain/bankdage";
 import { formaterBeloeb } from "../domain/beloeb";
+import { FORBEDRINGER, forbedringstekster } from "../domain/forbedringer";
 import { KLASSIFIKATION, TOILET_OG_OMKLAEDNING, type Del } from "../domain/klassifikation";
 import { KONTOPLAN } from "../domain/kontoplan";
 import {
@@ -460,6 +461,14 @@ export function kontrollerOpgave(opgave: Opgave): string[] {
     }
     if (b.type === "forbedring" && brutto !== null) {
       if (brutto > 750_000 * KR) brud("10.3: Forbedringen er over 750.000 kr.");
+      // 8.4 (version 1.6): beløbet skal passe til projektets art og omfang.
+      const projekt = FORBEDRINGER.find((f) => forbedringstekster(f).some((tekst) => b.tekst.includes(tekst)));
+      if (!projekt) brud(`8.4: Forbedringen i bilag ${b.nummer} er ikke et kendt projekt.`);
+      else {
+        const kroner = brutto / KR;
+        const passer = kroner < 100_000 ? projekt.lille === true : projekt.min <= kroner && kroner <= projekt.max;
+        if (!passer) brud(`8.4: Beløbet passer ikke til forbedringen "${projekt.navn}" i bilag ${b.nummer}.`);
+      }
       if (brutto < 100_000 * KR) {
         if (!moms) brud("10.3: Forbedringen er under 100.000 kr. ved momsfri ejendom.");
         else {

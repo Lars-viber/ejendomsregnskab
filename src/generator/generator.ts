@@ -21,11 +21,11 @@ import {
 } from "../domain/opgave";
 import type { Variant } from "../domain/variant";
 import { kontrollerOpgave } from "../regler/regelkontrol";
+import { FORBEDRINGER } from "../domain/forbedringer";
 import { klassifikation, type Del } from "../domain/klassifikation";
 import { danTilfaeldig, type Tilfaeldig } from "./tilfaeldig";
 import {
   BANKER,
-  FORBEDRINGER,
   FORSIKRINGSSELSKABER,
   INDHOLDSTEKSTER,
   REALKREDITINSTITUTTER,
@@ -269,17 +269,15 @@ function byg(variant: Variant, forsoeg: number): Model | null {
 
   // Forbedringen vedrører ved delvis moms boligdelen, erhvervsdelen eller hele ejendommen (9.2).
   const forbedringAnvendelse: Anvendelse = status === "delvis" ? r.vaelg<Del>(["bolig", "erhverv", "hele"]) : status;
-  const forbedring = r.vaelg(FORBEDRINGER.filter((f) => f[forbedringAnvendelse]));
   const forbedringPlan: Plan = {
     type: "forbedring",
     placering: { slags: "maaned", maaned: r.heltal(10, 12), andel: iv(0.05, 0.95) },
     indhold: [{ konto: 20000, indhold: "Forbedringer, tømrer, murer, vvs, arkitekt, ingeniør, el" }],
-    afsender: forbedring.afsender,
+    afsender: "", // projekt og afsender vælges, når beløbet kendes (8.4)
     beloeb: 0, // fastlægges, når momsen kendes (9.4)
     konto: 20000,
     inklMoms: true,
     anvendelse: forbedringAnvendelse,
-    projekt: forbedring[forbedringAnvendelse],
   };
   plan.push(forbedringPlan);
 
@@ -551,6 +549,17 @@ function byg(variant: Variant, forsoeg: number): Model | null {
     }
   } else {
     forbedringPlan.beloeb = nedrund(iv(100_000, 750_000, 150_000, 600_000) * KR, 1_000 * KR);
+  }
+
+  // Projektet skal passe til beløbet (8.4). Gør 9.4 forbedringen mindre end 100.000 kr., bruges et lille projekt.
+  {
+    const a = forbedringPlan.anvendelse!;
+    const kroner = forbedringPlan.beloeb / KR;
+    const mulige = FORBEDRINGER.filter((f) => f[a] && (kroner < 100_000 ? f.lille : f.min <= kroner && kroner <= f.max));
+    if (mulige.length === 0) return null;
+    const valgt = r.vaelg(mulige);
+    forbedringPlan.afsender = valgt.afsender;
+    forbedringPlan.projekt = valgt[a];
   }
 
   // Trin 5: saldi ved start på balancekontiene og likviditet bilag for bilag.
