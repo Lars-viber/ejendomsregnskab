@@ -154,7 +154,8 @@ export function Saldiopgoerelse({ opgave, session, onSessionChange, onTilForside
             {import.meta.env.DEV && (
               <button
                 type="button"
-                className="knap knap-test"
+                className="knap"
+                style={{ color: "#5b3b00", background: "#ffe7a8", border: "1px dashed #b07c00" }}
                 title="Kun lokal test: udfylder de korrekte saldi"
                 onClick={() => {
                   const svar: Record<string, SaldoSvar> = {};

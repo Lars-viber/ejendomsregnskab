@@ -15,7 +15,9 @@
     "kontoplan": "node scripts/danKontoplan.ts",
     "verify": "tsc -b && vitest run && vite build",
     "gennemgang": "vitest run --config vitest.gennemgang.config.ts danGennemgang",
-    "klassifikation": "vitest run --config vitest.gennemgang.config.ts danKlassifikation"
+    "klassifikation": "vitest run --config vitest.gennemgang.config.ts danKlassifikation",
+    "gennemloeb": "vite build --config scripts/gennemloeb/vite.config.ts && node scripts/gennemloeb/koer.mjs",
+    "kontroller-offentlig": "node scripts/kontrollerOffentligUdgave.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

@@ -1,0 +1,60 @@
+# Bygger applikationen og lægger den på GitHub Pages, hver gang koden sendes til grenen main
+# i arkivet "ejendomsregnskab" (Reference.docx afsnit 4). Kun den byggede applikation (mappen dist)
+# offentliggøres. Opgaven stoppes, hvis en af de automatiske tests fejler, eller hvis den byggede
+# udgave indeholder testknapper eller testkode.
+name: Offentliggør på GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hent koden
+        uses: actions/checkout@v6
+      - name: Installér Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Installér pnpm (version fra package.json)
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - name: Klargør GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Installér afhængigheder
+        run: pnpm install --frozen-lockfile
+      - name: Kør de automatiske tests
+        run: pnpm test
+      - name: Byg applikationen
+        run: pnpm build
+      - name: Kontrollér, at testknapper og testkode ikke er med
+        run: pnpm kontroller-offentlig
+      - name: Upload den byggede applikation
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Offentliggør på GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

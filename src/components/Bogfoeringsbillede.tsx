@@ -239,7 +239,8 @@ export function Bogfoeringsbillede({ opgave, session, onSessionChange, onTilFors
             {import.meta.env.DEV && (
               <button
                 type="button"
-                className="knap knap-test"
+                className="knap"
+                style={{ color: "#5b3b00", background: "#ffe7a8", border: "1px dashed #b07c00" }}
                 title="Kun lokal test: bogfører alle 20 bilag med facit og går til saldiopgørelsen"
                 onClick={() =>
                   opdater({

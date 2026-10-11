@@ -885,10 +885,3 @@ h2 {
 .bilagsliste p {
   margin: 2px 0 0;
 }
-
-/* Midlertidig testknap – vises kun i den lokale udgave. */
-.knap-test {
-  color: #5b3b00;
-  background: #ffe7a8;
-  border: 1px dashed #b07c00;
-}
